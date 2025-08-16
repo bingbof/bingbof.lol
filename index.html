@@ -17,11 +17,12 @@
             max-width: 90%;
             max-height: 90vh;
             display: block;
-            transition: transform 0.3s ease; /* Smooth transition for hover effect */
+            transition: transform 0.3s ease;
+            cursor: pointer; /* Change cursor to pointer on hover */
         }
 
         img:hover {
-            transform: scale(1.05); /* Slightly enlarge image on hover */
+            transform: scale(1.05);
         }
     </style>
 </head>
@@ -29,12 +30,15 @@
     <img src="you.png" alt="You" id="mainImage">
 
     <script>
-        document.getElementById('mainImage').addEventListener('click', function() {
+        const mainImage = document.getElementById('mainImage');
+
+        mainImage.addEventListener('click', function() {
             const password = prompt("Please enter the password:");
             if (password === "acyborgfrom2050") {
                 window.location.href = "https://pixeldrain.com/u/zYdkoce1";
             } else {
-                window.close();
+                mainImage.style.display = 'none'; // Hide the image
+                mainImage.removeEventListener('click', this); // Remove clickability
             }
         });
     </script>
