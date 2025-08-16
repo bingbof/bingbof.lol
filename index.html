@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Centered Image</title>
+    <title>BINGITRON</title>
     <style>
         body {
             margin: 0;
@@ -16,12 +16,28 @@
         img {
             max-width: 90%;
             max-height: 90vh;
-            display: block; /* Remove extra space below image */
+            display: block;
+            transition: transform 0.3s ease; /* Smooth transition for hover effect */
+        }
+
+        img:hover {
+            transform: scale(1.05); /* Slightly enlarge image on hover */
         }
     </style>
 </head>
 <body>
-    <img src="you.png" alt="You">
+    <img src="you.png" alt="You" id="mainImage">
+
+    <script>
+        document.getElementById('mainImage').addEventListener('click', function() {
+            const password = prompt("Please enter the password:");
+            if (password === "acyborgfrom2050") {
+                window.location.href = "https://pixeldrain.com/u/zYdkoce1";
+            } else {
+                window.close();
+            }
+        });
+    </script>
 </body>
 </html>
 
