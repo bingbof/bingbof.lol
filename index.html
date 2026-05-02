@@ -1,109 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>bingbof studios</title><link rel="shortcut icon" type="image/png" href="images/pogger.png">
-  <style>
-    body {
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(135deg, #beb5ff 0%, #7d7dff 100%);
-      margin: 0;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      overflow: hidden;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle at center, transparent 0%, #667eea 70%, #764ba2 100%);
-      opacity: 0;
-      z-index: -1;
-      animation: gradientPulse 6s ease-in-out infinite;
-    }
-
-    @keyframes gradientPulse {
-      0%, 100% {
-        opacity: 0;
-        transform: scale(1.5);
-      }
-      50% {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    
-
-    .card {
-      width: 300px;
-      perspective: 1000px;
-    }
-    .card img {
-      width: 100%;
-      border-radius: 16px;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.25);
-      transition: transform 0.15s ease, box-shadow 0.15s ease;
-      transform-style: preserve-3d;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bingbof website</title>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  
-
-  <div class="card">
-    <img src="images/if i could be a girl then i would.png">
+  <div id="landing" class="screen landing-screen">
+    <button id="enterBtn" class="enter-button" aria-label="Enter site">enterance...</button>
   </div>
-  <script>
-    const card = document.querySelector('.card');
-    const img = card.querySelector('img');
 
-    card.addEventListener('mousemove', (e) => {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+  <div id="main" class="screen main-screen hidden">
+    <video id="bgVideo" class="background-video" src="loopvid.mp4" autoplay muted loop playsinline></video>
+    <video id="secretVideo" class="background-video secret-video hidden" src="secret.mov" playsinline></video>
+    <div class="background-overlay"></div>
+    <div class="main-content">
+      <h1>𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨 𝐦𝐲 𝐛𝐢𝐧𝐠𝐛𝐨𝐟 𝐰𝐞𝐛𝐬𝐢𝐭𝐞</h1>
+    </div>
+  </div>
 
-      const centerX = rect.width / 2;
-      const centerY = rect.height / 2;
+  <audio id="bgAudio" src="loop.wav" loop></audio>
 
-      const rotateX = ((y - centerY) / centerY) * 10; // 41 but i got 41 gold :joy:
-      const rotateY = ((x - centerX) / centerX) * 10;
-
-      img.style.transform = `rotateX(${rotateX}deg) rotateY(${-rotateY}deg) scale(1.05)`;
-      img.style.boxShadow = `${rotateY * 2}px ${rotateX * 2}px 30px rgba(0,0,0,0.35)`;
-    });
-
-    card.addEventListener('mouseleave', () => {
-      img.style.transform = 'rotateX(0) rotateY(0) scale(1)';
-      img.style.boxShadow = '0 10px 20px rgba(0,0,0,0.25)';
-    });
-
-    const socialToggle = document.getElementById('socialToggle');
-    const socialPanel = document.getElementById('socialPanel');
-    let isSocialMenuOpen = false;
-
-    socialToggle.addEventListener('click', () => {
-      isSocialMenuOpen = !isSocialMenuOpen;
-      socialPanel.classList.toggle('active', isSocialMenuOpen);
-      socialToggle.classList.toggle('active', isSocialMenuOpen);
-    });
-
-    document.addEventListener('click', (e) => {
-      if (!socialToggle.contains(e.target) && !socialPanel.contains(e.target)) {
-        isSocialMenuOpen = false;
-        socialPanel.classList.remove('active');
-        socialToggle.classList.remove('active');
-      }
-    });
-  </script>
-
-  <script src="https://status.cafe/current-status.js?name=ohthatsgore" defer></script>
+  <script src="script.js"></script>
 </body>
 </html>
