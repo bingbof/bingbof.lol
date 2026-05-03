@@ -9,6 +9,10 @@
 <body>
   <div id="landing" class="screen">
     <button id="enterBtn" class="enter">entrance...</button>
+    <p class="flash-warning" aria-label="Flashing visuals warning">
+      <span class="flash-warning-icon" aria-hidden="true">&#9888;</span>
+      contains brief flashing visuals
+    </p>
   </div>
 
   <div id="main" class="screen hidden">
@@ -150,7 +154,7 @@
     </button>
   </div>
 
-  <video id="secretVideo" class="secret hidden" src="secret.mov" playsinline></video>
+  <video id="secretVideo" class="secret hidden" src="secret.mp4" playsinline></video>
 
   <div id="infoOverlay" class="info-overlay" aria-hidden="true">
     <div class="info-card" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
@@ -163,7 +167,12 @@
           <li><kbd>esc</kbd> &mdash; close this overlay</li>
         </ul>
       </section>
-      <p class="info-credit">made with &lt;3 by bingy</p>
+      <p class="info-credit">
+        made with &lt;3 by bingy
+        <br>
+        thanks to <a class="info-link" href="https://accidentalwatermelon.org" target="_blank" rel="noopener noreferrer">the accidental watermelon</a>
+      </p>
+      <p class="info-cipher" aria-hidden="true">a29uYW1p</p>
     </div>
   </div>
 

@@ -52,8 +52,7 @@ async function setupAudioGraph() {
     return;
   }
 
-  // Note: bgVideo is muted, secretVideo only plays during konami easter egg.
-  // Routing only the four audio elements keeps the graph robust on all browsers.
+  // bgVideo is muted, so we only route the audio elements through the graph.
   const elements = [entranceAudio, homeAudio, sparkleAudio, menuAudio];
   for (const el of elements) {
     try {
@@ -112,6 +111,7 @@ async function onFirstInteraction() {
 window.addEventListener('pointerdown', onFirstInteraction, { once: true });
 window.addEventListener('keydown',     onFirstInteraction, { once: true });
 
+// ---------- konami easter egg ----------
 const cheatCode = [
   'arrowup', 'arrowup',
   'arrowdown', 'arrowdown',
@@ -120,6 +120,54 @@ const cheatCode = [
 ];
 let cheatIndex = 0;
 let secretActive = false;
+
+function openSecret() {
+  if (secretActive) return;
+  secretActive = true;
+
+  entranceAudio.pause();
+  homeAudio.pause();
+  menuAudio.pause();
+  bgVideo.pause();
+
+  secretVideo.classList.remove('hidden');
+  secretVideo.muted = isMuted;
+  secretVideo.volume = 1.0;
+  secretVideo.play().catch(() => {});
+
+  // request fullscreen on the document so the video covers everything
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+  if (req) req.call(el).catch(() => {});
+}
+
+function closeSecret() {
+  if (!secretActive) return;
+
+  secretVideo.pause();
+  secretVideo.currentTime = 0;
+  secretVideo.muted = true;
+  secretVideo.classList.add('hidden');
+
+  const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+  if (exit && document.fullscreenElement) exit.call(document).catch(() => {});
+
+  if (onMenu) {
+    menuAudio.play().catch(() => {});
+  } else if (!landing.classList.contains('hidden')) {
+    entranceAudio.play().catch(() => {});
+  } else {
+    bgVideo.muted = true;
+    bgVideo.loop = true;
+    bgVideo.play().catch(() => {});
+    homeAudio.play().catch(() => {});
+  }
+
+  secretActive = false;
+  cheatIndex = 0;
+}
+
+if (secretVideo) secretVideo.addEventListener('ended', closeSecret);
 
 function fadeOut(audio, ms) {
   return new Promise((resolve) => {
@@ -163,51 +211,6 @@ async function enterSite() {
   homeAudio.currentTime = 0;
   homeAudio.play().catch(() => {});
 }
-
-function openSecret() {
-  if (secretActive) return;
-  secretActive = true;
-
-  entranceAudio.pause();
-  homeAudio.pause();
-  menuAudio.pause();
-  bgVideo.pause();
-
-  secretVideo.classList.remove('hidden');
-  secretVideo.muted = isMuted;
-  secretVideo.volume = 1.0;
-  secretVideo.play().catch(() => {});
-
-  const el = document.documentElement;
-  const req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-  if (req) req.call(el).catch(() => {});
-}
-
-function closeSecret() {
-  if (!secretActive) return;
-
-  secretVideo.pause();
-  secretVideo.currentTime = 0;
-  secretVideo.muted = true;
-  secretVideo.classList.add('hidden');
-
-  const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-  if (exit && document.fullscreenElement) exit.call(document).catch(() => {});
-
-  if (onMenu) {
-    menuAudio.play().catch(() => {});
-  } else {
-    bgVideo.muted = true;
-    bgVideo.loop = true;
-    bgVideo.play().catch(() => {});
-    homeAudio.play().catch(() => {});
-  }
-
-  secretActive = false;
-  cheatIndex = 0;
-}
-
-secretVideo.addEventListener('ended', closeSecret);
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -363,11 +366,6 @@ if (infoCloseBtn) infoCloseBtn.addEventListener('click', closeInfoOverlay);
 if (infoOverlay)  infoOverlay.addEventListener('click', (e) => {
   if (e.target === infoOverlay) closeInfoOverlay();
 });
-window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && infoOverlay && infoOverlay.classList.contains('show')) {
-    closeInfoOverlay();
-  }
-});
 
 // discord username copy-to-clipboard
 const discordBtn = document.querySelector('.discord-link');
@@ -481,6 +479,14 @@ window.addEventListener('resize', syncMarqueeSpeed);
 
 window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();
+
+  if (event.key === 'Escape') {
+    if (secretActive) { closeSecret(); return; }
+    if (infoOverlay && infoOverlay.classList.contains('show')) {
+      closeInfoOverlay();
+      return;
+    }
+  }
 
   if (!landing.classList.contains('hidden') && (key === 'enter' || key === ' ')) {
     enterSite();

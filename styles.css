@@ -91,9 +91,37 @@ html, body {
 /* ============================================================
    LANDING / ENTRANCE
    ============================================================ */
+#landing {
+  /* override .screen's grid so the warning sits flush under the button */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
 .enter {
   font-size: 1.25rem;
   padding: 0.75rem 1.5rem;
+}
+
+.flash-warning {
+  margin: 0;
+  padding: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.flash-warning-icon {
+  font-size: 0.85rem;
+  letter-spacing: 0;
+  color: rgba(255, 200, 90, 0.55);
 }
 
 /* ============================================================
@@ -247,6 +275,21 @@ html, body {
 #menuScreen.show {
   opacity: 1;
   pointer-events: auto;
+}
+
+/* vignette layer above starfield, below content */
+#menuScreen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 35%,
+    rgba(0, 0, 0, 0.55) 80%,
+    rgba(0, 0, 0, 0.85) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* starfield */
@@ -453,19 +496,6 @@ html, body {
 }
 
 /* ============================================================
-   SECRET / KONAMI VIDEO
-   ============================================================ */
-.secret {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
-  z-index: 100;
-}
-
-/* ============================================================
    CORNER ICON BUTTONS (info + mute, only visible on menu)
    ============================================================ */
 .icon-btn {
@@ -631,7 +661,44 @@ html, body {
   padding-top: 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
   font-size: 0.82rem;
+  line-height: 1.7;
   letter-spacing: 0.06em;
   text-align: center;
   color: rgba(255, 255, 255, 0.45);
+}
+
+.info-link {
+  color: rgba(255, 255, 255, 0.75);
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.25);
+  text-underline-offset: 0.2em;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.info-link:hover, .info-link:focus-visible {
+  color: #fff;
+  text-decoration-color: rgba(255, 255, 255, 0.7);
+  outline: none;
+}
+
+.info-cipher {
+  margin: 0.9rem 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.45em;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.22);
+  user-select: text;
+}
+
+/* ============================================================
+   SECRET / KONAMI VIDEO
+   ============================================================ */
+.secret {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  z-index: 100;
 }
