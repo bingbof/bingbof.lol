@@ -23,14 +23,94 @@ menuAudio.volume    = MENU_VOLUME;
 entranceAudio.volume = ENTRANCE_VOLUME;
 homeAudio.volume     = HOME_VOLUME;
 
-// start entrance audio on load (browser may block until user gesture)
 function playEntranceAudio() {
   entranceAudio.play().catch(() => {});
 }
-playEntranceAudio();
-// fallback: kick it off on the first interaction if autoplay was blocked
-window.addEventListener('pointerdown', playEntranceAudio, { once: true });
-window.addEventListener('keydown',     playEntranceAudio, { once: true });
+
+// ---------- web audio graph: muffle + duck audio when tab loses focus ----------
+const FOCUSED_FREQ   = 22050;  // pass-through (no filtering)
+const UNFOCUSED_FREQ =   700;  // muffled "in another room" cutoff
+const FOCUSED_GAIN   = 1.0;
+const UNFOCUSED_GAIN = 0.7;    // ~30% quieter when tabbed out
+const RAMP_TIME      = 0.4;
+
+let audioContext = null;
+const audioNodes  = new Map();   // element -> { filter, gain }
+let audioGraphReady = false;
+
+async function setupAudioGraph() {
+  if (audioGraphReady) return;
+  audioGraphReady = true;
+
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+
+  try {
+    audioContext = new Ctx();
+  } catch (e) {
+    audioContext = null;
+    return;
+  }
+
+  // Note: bgVideo is muted, secretVideo only plays during konami easter egg.
+  // Routing only the four audio elements keeps the graph robust on all browsers.
+  const elements = [entranceAudio, homeAudio, sparkleAudio, menuAudio];
+  for (const el of elements) {
+    try {
+      const source = audioContext.createMediaElementSource(el);
+      const filter = audioContext.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = FOCUSED_FREQ;
+      filter.Q.value = 0.707;
+      const gain = audioContext.createGain();
+      gain.gain.value = FOCUSED_GAIN;
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioContext.destination);
+      audioNodes.set(el, { filter, gain });
+    } catch (e) {
+      console.warn('Audio routing failed for', el.id, e);
+    }
+  }
+
+  // Awaiting resume avoids the spin-up glitch on the first audio frame.
+  if (audioContext.state === 'suspended') {
+    try { await audioContext.resume(); } catch (e) { /* ignore */ }
+  }
+  applyFocusState();
+}
+
+let isMuted = false;
+
+function applyFocusState() {
+  if (!audioContext) return;
+  const muffled = document.hidden || !document.hasFocus();
+  const targetFreq = muffled ? UNFOCUSED_FREQ : FOCUSED_FREQ;
+  const targetGain = isMuted ? 0 : (muffled ? UNFOCUSED_GAIN : FOCUSED_GAIN);
+  const t = audioContext.currentTime + RAMP_TIME;
+  for (const { filter, gain } of audioNodes.values()) {
+    try {
+      filter.frequency.cancelScheduledValues(audioContext.currentTime);
+      gain.gain.cancelScheduledValues(audioContext.currentTime);
+      filter.frequency.linearRampToValueAtTime(targetFreq, t);
+      gain.gain.linearRampToValueAtTime(targetGain, t);
+    } catch (e) { /* ignore */ }
+  }
+}
+
+document.addEventListener('visibilitychange', applyFocusState);
+window.addEventListener('blur',  applyFocusState);
+window.addEventListener('focus', applyFocusState);
+
+// Set up the audio graph on first interaction, THEN start the entrance audio.
+// Awaiting setup avoids the brief muffle that happens when an already-playing
+// audio element is rerouted through a freshly-created audio context.
+async function onFirstInteraction() {
+  await setupAudioGraph();
+  playEntranceAudio();
+}
+window.addEventListener('pointerdown', onFirstInteraction, { once: true });
+window.addEventListener('keydown',     onFirstInteraction, { once: true });
 
 const cheatCode = [
   'arrowup', 'arrowup',
@@ -74,6 +154,9 @@ async function enterSite() {
 
   await fadeOut(entranceAudio, FADE_MS);
 
+  // measure the marquee NOW so the animation starts with correct durations
+  syncMarqueeSpeed();
+
   landing.classList.add('hidden');
   main.classList.remove('hidden');
 
@@ -91,7 +174,7 @@ function openSecret() {
   bgVideo.pause();
 
   secretVideo.classList.remove('hidden');
-  secretVideo.muted = false;
+  secretVideo.muted = isMuted;
   secretVideo.volume = 1.0;
   secretVideo.play().catch(() => {});
 
@@ -130,48 +213,182 @@ function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-let transitioning = false;
-let onMenu = false;
+let transitioning   = false;
+let onMenu          = false;
+let hasVisitedMenu  = false;
 
 async function transitionToMenu() {
   if (transitioning || onMenu) return;
   transitioning = true;
 
+  // always reset to the main view when entering the menu
+  showMenuView('main');
+
+  if (hasVisitedMenu) {
+    // Subsequent visits: keep the slide animation, skip the white screen + sparkle.
+    // Snap the menu to full opacity instantly (it stays hidden behind #main
+    // because of z-index), then slide #main up to cleanly reveal it.
+    fadeOut(homeAudio, 800);
+
+    menuScreen.classList.add('no-anim');
+    menuScreen.classList.add('show');
+    void menuScreen.offsetHeight;
+    menuScreen.classList.remove('no-anim');
+
+    main.classList.add('slide-up');
+    menuAudio.currentTime = 0;
+    menuAudio.play().catch(() => {});
+    startParallax();
+
+    // wait for the slide to complete
+    await wait(1200);
+
+    bgVideo.pause();
+
+    onMenu = true;
+    transitioning = false;
+    return;
+  }
+
+  // First visit: full animation with white flash + sparkle
   fadeOut(homeAudio, 800);
 
   main.classList.add('slide-up');
   whiteScreen.classList.add('show');
 
-  // 1.2s slide + ~2s hold on white
-  await wait(1200 + 2000);
+  // 1.2s slide + ~1s hold on white
+  await wait(1200 + 1000);
 
   sparkleAudio.currentTime = 0;
   sparkleAudio.play().catch(() => {});
+  // cross-fade: white fades out and menu fades in at the same time,
+  // so there's no body-black moment between them
   whiteScreen.classList.remove('show');
-
-  // wait for white to fade out
-  await wait(1000);
-
-  bgVideo.pause();
-
   menuScreen.classList.add('show');
   menuAudio.currentTime = 0;
   menuAudio.play().catch(() => {});
   startParallax();
 
+  // wait for white to finish fading out
+  await wait(1000);
+
+  bgVideo.pause();
+
+  hasVisitedMenu = true;
   onMenu = true;
   transitioning = false;
 }
 
+async function backToHome() {
+  if (transitioning || !onMenu) return;
+  transitioning = true;
+
+  fadeOut(menuAudio, 1000);
+
+  // resume the home video and slide #main back down (1.2s slide)
+  bgVideo.play().catch(() => {});
+  main.classList.remove('slide-up');
+
+  await wait(1200);
+
+  // hide menu (it's already covered by main, this just clears pointer events)
+  menuScreen.classList.remove('show');
+
+  homeAudio.volume = HOME_VOLUME;
+  homeAudio.currentTime = 0;
+  homeAudio.play().catch(() => {});
+
+  onMenu = false;
+  transitioning = false;
+}
+
+const backBtn      = document.getElementById('backBtn');
+const viewBackBtn  = document.getElementById('viewBackBtn');
+
+// menuScreen sub-views: switch via data-view attribute on #menuScreen
+function showMenuView(name) {
+  menuScreen.dataset.view = name;
+}
+
 enterBtn.addEventListener('click', enterSite);
 clickMeBtn.addEventListener('click', transitionToMenu);
+if (backBtn)     backBtn.addEventListener('click', backToHome);
+if (viewBackBtn) viewBackBtn.addEventListener('click', () => showMenuView('main'));
 
-document.querySelectorAll('.menu-btn').forEach((btn) => {
+document.querySelectorAll('.menu-btn[data-view]').forEach((btn) => {
   btn.addEventListener('click', () => {
-    const target = btn.dataset.target;
-    if (target) window.location.href = target + '/';
+    const view = btn.dataset.view;
+    if (view) showMenuView(view);
   });
 });
+
+// ---------- mute toggle ----------
+const muteBtn = document.getElementById('muteBtn');
+if (muteBtn) {
+  muteBtn.addEventListener('click', () => {
+    isMuted = !isMuted;
+    muteBtn.classList.toggle('muted', isMuted);
+    if (audioContext) {
+      applyFocusState();
+    } else {
+      // fallback when the web audio graph couldn't be created
+      for (const a of [entranceAudio, homeAudio, sparkleAudio, menuAudio]) {
+        a.muted = isMuted;
+      }
+    }
+    if (secretActive) secretVideo.muted = isMuted;
+    muteBtn.blur();
+  });
+}
+
+// ---------- info overlay ----------
+const infoBtn      = document.getElementById('infoBtn');
+const infoOverlay  = document.getElementById('infoOverlay');
+const infoCloseBtn = document.getElementById('infoCloseBtn');
+
+function openInfoOverlay() {
+  if (!infoOverlay) return;
+  infoOverlay.classList.add('show');
+  infoOverlay.setAttribute('aria-hidden', 'false');
+}
+function closeInfoOverlay() {
+  if (!infoOverlay) return;
+  infoOverlay.classList.remove('show');
+  infoOverlay.setAttribute('aria-hidden', 'true');
+  if (infoBtn) infoBtn.blur();
+}
+
+if (infoBtn)      infoBtn.addEventListener('click', openInfoOverlay);
+if (infoCloseBtn) infoCloseBtn.addEventListener('click', closeInfoOverlay);
+if (infoOverlay)  infoOverlay.addEventListener('click', (e) => {
+  if (e.target === infoOverlay) closeInfoOverlay();
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && infoOverlay && infoOverlay.classList.contains('show')) {
+    closeInfoOverlay();
+  }
+});
+
+// discord username copy-to-clipboard
+const discordBtn = document.querySelector('.discord-link');
+if (discordBtn) {
+  const handle  = discordBtn.querySelector('.social-handle');
+  const original = handle.textContent;
+  let copyTimer = null;
+  discordBtn.addEventListener('click', async () => {
+    const username = discordBtn.dataset.username;
+    try {
+      await navigator.clipboard.writeText(username);
+      handle.textContent = 'copied!';
+    } catch (e) {
+      handle.textContent = 'copy failed';
+    }
+    // remove focus so the button doesn't stay highlighted in white
+    discordBtn.blur();
+    if (copyTimer) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => { handle.textContent = original; }, 1800);
+  });
+}
 
 // generate the starfield for the menu screen
 function makeStars(selector, count) {
@@ -237,24 +454,30 @@ function startParallax() {
 const MARQUEE_SPEED = 90; // px/s — tweak if you want it slower/faster
 
 function syncMarqueeSpeed() {
-  const track = document.querySelector('.marquee-track');
-  if (!track) return;
-  const trackWidth = track.scrollWidth;
-  if (!trackWidth) return;
+  const track   = document.querySelector('.marquee-track');
+  const marquee = document.querySelector('.marquee');
+  if (!track || !marquee) return;
 
-  const introDistance  = window.innerWidth;     // 100vw
-  const scrollDistance = trackWidth / 2;        // -50% of track in keyframe
+  const trackWidth   = track.scrollWidth;
+  const marqueeWidth = marquee.offsetWidth;
+  if (!trackWidth || !marqueeWidth) return;
 
-  const introDur  = (introDistance  / MARQUEE_SPEED).toFixed(2);
-  const scrollDur = (scrollDistance / MARQUEE_SPEED).toFixed(2);
+  // The track parks just past the marquee's right edge during the initial
+  // delay, then slides in to translateX(0). 60px of buffer guarantees the
+  // first character isn't already poking into the visible area.
+  const slideDistance = marqueeWidth + 60;
+  const slideDur      = (slideDistance / MARQUEE_SPEED).toFixed(2);
 
-  track.style.setProperty('--intro-duration',  introDur  + 's');
+  // The infinite scroll moves -50% of the (doubled) track per cycle.
+  const scrollDistance = trackWidth / 2;
+  const scrollDur      = (scrollDistance / MARQUEE_SPEED).toFixed(2);
+
+  track.style.setProperty('--slide-distance', slideDistance + 'px');
+  track.style.setProperty('--slide-duration', slideDur + 's');
   track.style.setProperty('--scroll-duration', scrollDur + 's');
 }
 
-window.addEventListener('load',   syncMarqueeSpeed);
 window.addEventListener('resize', syncMarqueeSpeed);
-syncMarqueeSpeed();
 
 window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();
