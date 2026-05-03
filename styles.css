@@ -124,13 +124,19 @@ html, body {
 #menuScreen {
   position: fixed;
   inset: 0;
-  background: #000;
+  background:
+    radial-gradient(ellipse at 25% 30%, rgba(80, 30, 140, 0.50), transparent 55%),
+    radial-gradient(ellipse at 80% 70%, rgba(190, 50, 130, 0.32), transparent 55%),
+    radial-gradient(ellipse at 50% 100%, rgba(30, 70, 170, 0.45), transparent 60%),
+    radial-gradient(ellipse at 95% 10%, rgba(40, 200, 220, 0.18), transparent 55%),
+    #03020a;
   z-index: 20;
   display: grid;
   place-items: center;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.6s ease;
+  overflow: hidden;
 }
 
 #menuScreen.show {
@@ -138,7 +144,69 @@ html, body {
   pointer-events: auto;
 }
 
+.space-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.stars {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.stars-small  { animation: drift-a 220s ease-in-out infinite; }
+.stars-medium { animation: drift-b 140s ease-in-out infinite; }
+.stars-large  { animation: drift-c  90s ease-in-out infinite; }
+
+@keyframes drift-a {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: -40px 25px; }
+}
+@keyframes drift-b {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 35px -20px; }
+}
+@keyframes drift-c {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: -15px 12px; }
+}
+
+.star {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle ease-in-out infinite;
+}
+
+.stars-small .star {
+  width: 1px;
+  height: 1px;
+  opacity: 0.7;
+}
+.stars-medium .star {
+  width: 2px;
+  height: 2px;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+.stars-large .star {
+  width: 3px;
+  height: 3px;
+  box-shadow:
+    0 0 10px rgba(255, 255, 255, 0.95),
+    0 0 22px rgba(180, 150, 255, 0.55);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50%      { opacity: 1;    transform: scale(1.15); }
+}
+
 .menu-buttons {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
   gap: 1.4rem;
@@ -146,8 +214,10 @@ html, body {
 }
 
 .menu-btn {
-  background: transparent;
-  border: 1px solid #fff;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
   color: #fff;
   font: inherit;
   font-size: 1.4rem;
@@ -156,13 +226,17 @@ html, body {
   text-align: center;
   cursor: pointer;
   letter-spacing: 0.04em;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition: background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .menu-btn:hover, .menu-btn:focus {
   background: #fff;
   color: #000;
+  border-color: #fff;
   outline: none;
+  box-shadow:
+    0 0 24px rgba(255, 255, 255, 0.45),
+    0 0 60px rgba(180, 150, 255, 0.35);
 }
 
 .marquee {
@@ -178,11 +252,13 @@ html, body {
 }
 
 .marquee-track {
+  --intro-duration: 14s;
+  --scroll-duration: 30s;
   display: inline-flex;
   white-space: nowrap;
   animation:
-    marquee-intro 7s linear forwards,
-    marquee-scroll 30s linear 7s infinite;
+    marquee-intro var(--intro-duration) linear forwards,
+    marquee-scroll var(--scroll-duration) linear var(--intro-duration) infinite;
   animation-play-state: paused;
 }
 

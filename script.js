@@ -157,6 +157,7 @@ async function transitionToMenu() {
   menuScreen.classList.add('show');
   menuAudio.currentTime = 0;
   menuAudio.play().catch(() => {});
+  startParallax();
 
   onMenu = true;
   transitioning = false;
@@ -171,6 +172,89 @@ document.querySelectorAll('.menu-btn').forEach((btn) => {
     if (target) window.location.href = target + '/';
   });
 });
+
+// generate the starfield for the menu screen
+function makeStars(selector, count) {
+  const container = document.querySelector(selector);
+  if (!container) return;
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < count; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = (Math.random() * 100).toFixed(2) + '%';
+    star.style.top  = (Math.random() * 100).toFixed(2) + '%';
+    star.style.animationDelay    = (Math.random() * 4).toFixed(2) + 's';
+    star.style.animationDuration = (2 + Math.random() * 4).toFixed(2) + 's';
+    frag.appendChild(star);
+  }
+  container.appendChild(frag);
+}
+
+// fewer stars on small screens for performance
+const starScale = window.innerWidth < 700 ? 0.55 : 1;
+makeStars('.stars-small',  Math.round(180 * starScale));
+makeStars('.stars-medium', Math.round( 50 * starScale));
+makeStars('.stars-large',  Math.round( 12 * starScale));
+
+// ---------- cursor parallax on the menu screen ----------
+const parallaxLayers = [
+  { el: document.querySelector('.stars-small'),  depth:  -5 },
+  { el: document.querySelector('.stars-medium'), depth: -12 },
+  { el: document.querySelector('.stars-large'),  depth: -22 },
+];
+let parX = 0, parY = 0, parTargetX = 0, parTargetY = 0;
+let parRaf = null;
+
+window.addEventListener('mousemove', (e) => {
+  parTargetX = (e.clientX / window.innerWidth  - 0.5) * 2; // -1..1
+  parTargetY = (e.clientY / window.innerHeight - 0.5) * 2;
+});
+
+function parallaxFrame() {
+  parX += (parTargetX - parX) * 0.08;
+  parY += (parTargetY - parY) * 0.08;
+
+  for (const layer of parallaxLayers) {
+    if (!layer.el) continue;
+    const tx = (parX * layer.depth).toFixed(2);
+    const ty = (parY * layer.depth).toFixed(2);
+    layer.el.style.transform = `translate3d(${tx}px, ${ty}px, 0)`;
+  }
+
+  if (menuScreen.classList.contains('show')) {
+    parRaf = requestAnimationFrame(parallaxFrame);
+  } else {
+    parRaf = null;
+  }
+}
+
+function startParallax() {
+  if (parRaf) return;
+  parRaf = requestAnimationFrame(parallaxFrame);
+}
+
+// ---------- keep marquee at a constant pixels-per-second ----------
+const MARQUEE_SPEED = 90; // px/s — tweak if you want it slower/faster
+
+function syncMarqueeSpeed() {
+  const track = document.querySelector('.marquee-track');
+  if (!track) return;
+  const trackWidth = track.scrollWidth;
+  if (!trackWidth) return;
+
+  const introDistance  = window.innerWidth;     // 100vw
+  const scrollDistance = trackWidth / 2;        // -50% of track in keyframe
+
+  const introDur  = (introDistance  / MARQUEE_SPEED).toFixed(2);
+  const scrollDur = (scrollDistance / MARQUEE_SPEED).toFixed(2);
+
+  track.style.setProperty('--intro-duration',  introDur  + 's');
+  track.style.setProperty('--scroll-duration', scrollDur + 's');
+}
+
+window.addEventListener('load',   syncMarqueeSpeed);
+window.addEventListener('resize', syncMarqueeSpeed);
+syncMarqueeSpeed();
 
 window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();

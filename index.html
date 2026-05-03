@@ -49,6 +49,11 @@
   <div id="whiteScreen" aria-hidden="true"></div>
 
   <div id="menuScreen">
+    <div class="space-bg" aria-hidden="true">
+      <div class="stars stars-small"></div>
+      <div class="stars stars-medium"></div>
+      <div class="stars stars-large"></div>
+    </div>
     <div class="menu-buttons">
       <button class="menu-btn" type="button" data-target="socials">socials</button>
       <button class="menu-btn" type="button" data-target="music">music</button>
@@ -58,10 +63,10 @@
 
   <video id="secretVideo" class="secret hidden" src="secret.mov" playsinline></video>
 
-  <audio id="entranceAudio" src="startloop.wav" loop></audio>
-  <audio id="homeAudio" src="homeloop_audio.wav" loop></audio>
-  <audio id="sparkleAudio" src="sparkle.wav"></audio>
-  <audio id="menuAudio" src="menuloop_audio.wav" loop></audio>
+  <audio id="entranceAudio" src="startloop.mp3" loop preload="auto"></audio>
+  <audio id="homeAudio" src="homeloop_audio.mp3" loop preload="auto"></audio>
+  <audio id="sparkleAudio" src="sparkle.mp3" preload="auto"></audio>
+  <audio id="menuAudio" src="menuloop_audio.mp3" loop preload="auto"></audio>
 
   <script src="script.js"></script>
 </body>
