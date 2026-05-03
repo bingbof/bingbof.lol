@@ -3,24 +3,65 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>bingbof website</title>
+  <title>bingbof</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div id="landing" class="screen landing-screen">
-    <button id="enterBtn" class="enter-button" aria-label="Enter site">enterance...</button>
+  <div id="landing" class="screen">
+    <button id="enterBtn" class="enter">entrance...</button>
   </div>
 
-  <div id="main" class="screen main-screen hidden">
-    <video id="bgVideo" class="background-video" src="loopvid.mp4" autoplay muted loop playsinline></video>
-    <video id="secretVideo" class="background-video secret-video hidden" src="secret.mov" playsinline></video>
-    <div class="background-overlay"></div>
-    <div class="main-content">
-      <h1>𝐖𝐞𝐥𝐜𝐨𝐦𝐞 𝐭𝐨 𝐦𝐲 𝐛𝐢𝐧𝐠𝐛𝐨𝐟 𝐰𝐞𝐛𝐬𝐢𝐭𝐞</h1>
+  <div id="main" class="screen hidden">
+    <video id="bgVideo" class="bg-video" src="homeloop_video.mp4" autoplay muted loop playsinline></video>
+
+    <pre class="welcome">
+  ▄▄▄              ▄▄
+ █▀██  ██  ██▀▀     ██                              █▄
+   ██  ██  ██       ██             ▄               ▄██▄        ▄
+   ██  ██  ██ ▄█▀█▄ ██ ▄███▀ ▄███▄ ███▄███▄ ▄█▀█▄   ██ ▄███▄   ███▄███▄ ██ ██
+   ██▄ ██▄ ██ ██▄█▀ ██ ██    ██ ██ ██ ██ ██ ██▄█▀   ██ ██ ██   ██ ██ ██ ██▄██
+   ▀████▀███▀▄▀█▄▄▄▄██▄▀███▄▄▀███▀▄██ ██ ▀█▄▀█▄▄▄  ▄██▄▀███▀  ▄██ ██ ▀█▄▄▀██▀
+                                                                          ██
+                                                                        ▀▀▀
+
+                                   ▄▄
+ █▄                   █▄          ██                   █▄             █▄
+ ██    ▀▀ ▄        ▄▄ ██         ▄██▄                  ██          ▀▀▄██▄
+ ████▄ ██ ████▄ ▄████ ████▄ ▄███▄ ██   ▀█▄ █▄ ██▀▄█▀█▄ ████▄ ▄██▀█ ██ ██ ▄█▀█▄
+ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██    ██▄██▄██ ██▄█▀ ██ ██ ▀███▄ ██ ██ ██▄█▀
+▄████▀▄██▄██ ▀█▄▀████▄████▀▄▀███▀▄██     ▀██▀██▀▄▀█▄▄▄▄████▀█▄▄██▀▄██▄██▄▀█▄▄▄
+                   ██             ██
+                 ▀▀▀             ▀▀
+</pre>
+
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <span>BINGBOF (n.) &mdash; a small inflatable mammal of dubious moral standing, known to whistle Pachelbel's Canon backwards while gently dissolving into static at exactly 3:47 AM in a parking lot you've never visited but somehow remember from a dream you haven't had yet &nbsp;//&nbsp; the residue left on a spoon after stirring an idea you weren't supposed to have &nbsp;//&nbsp; verb form: to bingbof, the act of opening a door that opens into the same door, slightly to the left, but only on Wednesdays &nbsp;//&nbsp; see also: the soft sound a vending machine makes when nobody is around to disappoint it &nbsp;//&nbsp; a federally unrecognized particle responsible for that one feeling you get in elevators &nbsp;//&nbsp; the hiccup of a god who has been holding their breath since the invention of toast &nbsp;//&nbsp;&nbsp;</span>
+        <span>BINGBOF (n.) &mdash; a small inflatable mammal of dubious moral standing, known to whistle Pachelbel's Canon backwards while gently dissolving into static at exactly 3:47 AM in a parking lot you've never visited but somehow remember from a dream you haven't had yet &nbsp;//&nbsp; the residue left on a spoon after stirring an idea you weren't supposed to have &nbsp;//&nbsp; verb form: to bingbof, the act of opening a door that opens into the same door, slightly to the left, but only on Wednesdays &nbsp;//&nbsp; see also: the soft sound a vending machine makes when nobody is around to disappoint it &nbsp;//&nbsp; a federally unrecognized particle responsible for that one feeling you get in elevators &nbsp;//&nbsp; the hiccup of a god who has been holding their breath since the invention of toast &nbsp;//&nbsp;&nbsp;</span>
+      </div>
+    </div>
+
+    <button id="clickMeBtn" class="click-me" type="button">
+      click me <span class="arrow" aria-hidden="true">&#x2193;</span>
+    </button>
+  </div>
+
+  <div id="whiteScreen" aria-hidden="true"></div>
+
+  <div id="menuScreen">
+    <div class="menu-buttons">
+      <button class="menu-btn" type="button" data-target="socials">socials</button>
+      <button class="menu-btn" type="button" data-target="music">music</button>
+      <button class="menu-btn" type="button" data-target="friends">friends</button>
     </div>
   </div>
 
-  <audio id="bgAudio" src="loop.wav" loop></audio>
+  <video id="secretVideo" class="secret hidden" src="secret.mov" playsinline></video>
+
+  <audio id="entranceAudio" src="startloop.wav" loop></audio>
+  <audio id="homeAudio" src="homeloop_audio.wav" loop></audio>
+  <audio id="sparkleAudio" src="sparkle.wav"></audio>
+  <audio id="menuAudio" src="menuloop_audio.wav" loop></audio>
 
   <script src="script.js"></script>
 </body>
