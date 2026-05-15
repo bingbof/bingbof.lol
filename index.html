@@ -18,39 +18,12 @@
   <div id="main" class="screen hidden">
     <video id="bgVideo" class="bg-video" src="homeloop_video.mp4" autoplay muted loop playsinline></video>
 
-    <pre class="welcome">
-  ▄▄▄              ▄▄
- █▀██  ██  ██▀▀     ██                              █▄
-   ██  ██  ██       ██             ▄               ▄██▄        ▄
-   ██  ██  ██ ▄█▀█▄ ██ ▄███▀ ▄███▄ ███▄███▄ ▄█▀█▄   ██ ▄███▄   ███▄███▄ ██ ██
-   ██▄ ██▄ ██ ██▄█▀ ██ ██    ██ ██ ██ ██ ██ ██▄█▀   ██ ██ ██   ██ ██ ██ ██▄██
-   ▀████▀███▀▄▀█▄▄▄▄██▄▀███▄▄▀███▀▄██ ██ ▀█▄▀█▄▄▄  ▄██▄▀███▀  ▄██ ██ ▀█▄▄▀██▀
-                                                                          ██
-                                                                        ▀▀▀
+    <pre class="welcome">bingbof.lol</pre>
 
-                                   ▄▄
- █▄                   █▄          ██                   █▄             █▄
- ██    ▀▀ ▄        ▄▄ ██         ▄██▄                  ██          ▀▀▄██▄
- ████▄ ██ ████▄ ▄████ ████▄ ▄███▄ ██   ▀█▄ █▄ ██▀▄█▀█▄ ████▄ ▄██▀█ ██ ██ ▄█▀█▄
- ██ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██    ██▄██▄██ ██▄█▀ ██ ██ ▀███▄ ██ ██ ██▄█▀
-▄████▀▄██▄██ ▀█▄▀████▄████▀▄▀███▀▄██     ▀██▀██▀▄▀█▄▄▄▄████▀█▄▄██▀▄██▄██▄▀█▄▄▄
-                   ██             ██
-                 ▀▀▀             ▀▀
-</pre>
-
-    <div class="marquee" aria-hidden="true">
-      <div class="marquee-track">
-        <span>BINGBOF (n.) &mdash; a small inflatable mammal of dubious moral standing, known to whistle Pachelbel's Canon backwards while gently dissolving into static at exactly 3:47 AM in a parking lot you've never visited but somehow remember from a dream you haven't had yet &nbsp;//&nbsp; the residue left on a spoon after stirring an idea you weren't supposed to have &nbsp;//&nbsp; verb form: to bingbof, the act of opening a door that opens into the same door, slightly to the left, but only on Wednesdays &nbsp;//&nbsp; see also: the soft sound a vending machine makes when nobody is around to disappoint it &nbsp;//&nbsp; a federally unrecognized particle responsible for that one feeling you get in elevators &nbsp;//&nbsp; the hiccup of a god who has been holding their breath since the invention of toast &nbsp;//&nbsp;&nbsp;</span>
-        <span>BINGBOF (n.) &mdash; a small inflatable mammal of dubious moral standing, known to whistle Pachelbel's Canon backwards while gently dissolving into static at exactly 3:47 AM in a parking lot you've never visited but somehow remember from a dream you haven't had yet &nbsp;//&nbsp; the residue left on a spoon after stirring an idea you weren't supposed to have &nbsp;//&nbsp; verb form: to bingbof, the act of opening a door that opens into the same door, slightly to the left, but only on Wednesdays &nbsp;//&nbsp; see also: the soft sound a vending machine makes when nobody is around to disappoint it &nbsp;//&nbsp; a federally unrecognized particle responsible for that one feeling you get in elevators &nbsp;//&nbsp; the hiccup of a god who has been holding their breath since the invention of toast &nbsp;//&nbsp;&nbsp;</span>
-      </div>
-    </div>
-
-    <button id="clickMeBtn" class="click-me" type="button">
-      click me <span class="arrow arrow-down" aria-hidden="true">&#x2193;</span>
+    <button id="clickMeBtn" class="click-me hidden-initial" type="button">
+      click me <span class="arrow arrow-down" aria-hidden="true">&#x25BC;</span>
     </button>
   </div>
-
-  <div id="whiteScreen" aria-hidden="true"></div>
 
   <div id="menuScreen" data-view="main">
     <div class="space-bg" aria-hidden="true">
@@ -60,12 +33,17 @@
     </div>
 
     <button id="backBtn" class="nav-btn nav-btn-top" type="button">
-      click me <span class="arrow arrow-up" aria-hidden="true">&#x2191;</span>
+      click me <span class="arrow arrow-up" aria-hidden="true">&#x25B2;</span>
     </button>
 
     <button id="viewBackBtn" class="nav-btn nav-btn-top" type="button">
-      <span class="arrow arrow-left" aria-hidden="true">&#x2190;</span> click me
+      <span class="arrow arrow-left" aria-hidden="true">&#x25C0;</span> click me
     </button>
+
+    <div id="dateTime" class="date-time" aria-live="off">
+      <div class="dt-time">--:--:--</div>
+      <div class="dt-date">&mdash;</div>
+    </div>
 
     <div class="view-stage">
       <div class="menu-view view-main">
@@ -99,7 +77,13 @@
           <li>
             <a class="social-link" href="https://www.youtube.com/channel/UCitLcxWYLydMykuwb0i64tA" target="_blank" rel="noopener noreferrer">
               <span class="social-name">youtube</span>
-              <span class="social-handle">channel</span>
+              <span class="social-handle">@bingbof</span>
+            </a>
+          </li>
+          <li>
+            <a class="social-link" href="https://github.com/bingbof/" target="_blank" rel="noopener noreferrer">
+              <span class="social-name">github</span>
+              <span class="social-handle">@bingbof</span>
             </a>
           </li>
           <li>
@@ -140,18 +124,45 @@
       <span class="info-glyph" aria-hidden="true">i</span>
     </button>
 
-    <button id="muteBtn" class="icon-btn corner-btn mute-btn" type="button" aria-label="Toggle audio">
-      <svg class="mute-icon mute-icon-on" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-      </svg>
-      <svg class="mute-icon mute-icon-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-        <line x1="23" y1="9" x2="17" y2="15"></line>
-        <line x1="17" y1="9" x2="23" y2="15"></line>
-      </svg>
-    </button>
+    <div class="audio-bar">
+      <div class="audio-progress">
+        <span id="audioCurrent" class="audio-time audio-time-current">0:00</span>
+        <input id="audioScrubber" class="audio-scrubber" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek song">
+        <span id="audioTotal" class="audio-time audio-time-total">0:00</span>
+      </div>
+      <div class="audio-controls">
+        <canvas id="vizCanvas" class="viz-canvas" width="80" height="22" aria-hidden="true"></canvas>
+        <div class="now-playing">
+          <div class="np-label">now playing</div>
+          <div class="np-title">a letter to hollis</div>
+          <div class="np-artist">2hollis</div>
+        </div>
+        <button id="playPauseBtn" class="icon-btn play-pause-btn" type="button" aria-label="Pause">
+          <svg class="pp-icon pp-icon-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <rect x="6" y="5" width="4" height="14" rx="1"></rect>
+            <rect x="14" y="5" width="4" height="14" rx="1"></rect>
+          </svg>
+          <svg class="pp-icon pp-icon-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
+            <polygon points="7 5 19 12 7 19"></polygon>
+          </svg>
+        </button>
+        <div class="volume-control">
+          <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="100" aria-label="Volume">
+          <button id="muteBtn" class="icon-btn mute-btn" type="button" aria-label="Toggle audio">
+            <svg class="mute-icon mute-icon-on" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg class="mute-icon mute-icon-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <video id="secretVideo" class="secret hidden" src="secret.mp4" playsinline></video>
@@ -172,13 +183,11 @@
         <br>
         thanks to <a class="info-link" href="https://accidentalwatermelon.org" target="_blank" rel="noopener noreferrer">the accidental watermelon</a>
       </p>
-      <p class="info-cipher" aria-hidden="true">a29uYW1p</p>
     </div>
   </div>
 
   <audio id="entranceAudio" src="startloop.mp3" loop preload="auto"></audio>
   <audio id="homeAudio" src="homeloop_audio.mp3" loop preload="auto"></audio>
-  <audio id="sparkleAudio" src="sparkle.mp3" preload="auto"></audio>
   <audio id="menuAudio" src="menuloop_audio.mp3" loop preload="auto"></audio>
 
   <script src="script.js"></script>
