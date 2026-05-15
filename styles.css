@@ -165,8 +165,14 @@ html, body {
      so the difference blend inverts the full glyph shapes against it */
   mix-blend-mode: difference;
   backface-visibility: visible;
-  animation: welcome-spin 5s linear infinite;
   will-change: transform;
+}
+
+/* spin only kicks in once the user clicks entrance, so it always starts
+   at 0deg (facing forward) rather than wherever a continuous loop happened
+   to land while they were on the landing screen */
+.welcome.spinning {
+  animation: welcome-spin 5s linear infinite;
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -856,4 +862,77 @@ html, body {
   object-fit: contain;
   background: #000;
   z-index: 100;
+}
+
+/* ============================================================
+   MOBILE WARNING POPUP
+   ============================================================ */
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  padding: 1.2rem;
+  box-sizing: border-box;
+}
+
+.mobile-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.mobile-card {
+  width: min(380px, 100%);
+  background: #050507;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  padding: 2rem 1.6rem;
+  font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+  color: #fff;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.mobile-title {
+  margin: 0 0 1rem;
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+
+.mobile-message {
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.mobile-btn {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  padding: 0.55rem 1.6rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mobile-btn:hover, .mobile-btn:focus-visible {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  outline: none;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
 }

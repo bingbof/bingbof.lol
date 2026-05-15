@@ -7,6 +7,14 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <div id="mobileOverlay" class="mobile-overlay" aria-hidden="true">
+    <div class="mobile-card" role="dialog" aria-modal="true" aria-labelledby="mobileTitle">
+      <h2 id="mobileTitle" class="mobile-title">heads up</h2>
+      <p class="mobile-message">bingbof.lol is best viewed on desktop. mobile works, but expect rough edges.</p>
+      <button id="mobileDismissBtn" class="mobile-btn" type="button">continue anyway</button>
+    </div>
+  </div>
+
   <div id="landing" class="screen">
     <button id="enterBtn" class="enter">entrance...</button>
     <p class="flash-warning" aria-label="Flashing visuals warning">

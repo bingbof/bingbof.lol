@@ -2,6 +2,7 @@ const landing        = document.getElementById('landing');
 const main           = document.getElementById('main');
 const enterBtn       = document.getElementById('enterBtn');
 const clickMeBtn     = document.getElementById('clickMeBtn');
+const welcome        = document.querySelector('.welcome');
 const menuScreen     = document.getElementById('menuScreen');
 const entranceAudio  = document.getElementById('entranceAudio');
 const homeAudio      = document.getElementById('homeAudio');
@@ -23,6 +24,30 @@ function playEntranceAudio() {
   // clicked through to the home screen (otherwise entrance audio overlays home)
   if (landing.classList.contains('hidden')) return;
   entranceAudio.play().catch(() => {});
+}
+
+// ---------- mobile-warning popup ----------
+const mobileOverlay    = document.getElementById('mobileOverlay');
+const mobileDismissBtn = document.getElementById('mobileDismissBtn');
+
+function isMobileDevice() {
+  const ua = navigator.userAgent || '';
+  const uaMobile = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const narrow   = window.innerWidth < 720;
+  return uaMobile || narrow;
+}
+
+if (mobileOverlay && isMobileDevice()) {
+  mobileOverlay.classList.add('show');
+  mobileOverlay.setAttribute('aria-hidden', 'false');
+}
+
+if (mobileDismissBtn) {
+  mobileDismissBtn.addEventListener('click', () => {
+    if (!mobileOverlay) return;
+    mobileOverlay.classList.remove('show');
+    mobileOverlay.setAttribute('aria-hidden', 'true');
+  });
 }
 
 // ---------- web audio graph: muffle when tab loses focus, user volume control ----------
@@ -214,6 +239,8 @@ async function enterSite() {
   // instant visual switch — no fade-to-black between entrance and home.
   // (click-me already has .hidden-initial from the HTML; we just remove it
   //  after 3s so it fades in cleanly without a flash on entry.)
+  // start the logo spin from 0deg right as the home screen appears
+  if (welcome) welcome.classList.add('spinning');
   landing.classList.add('hidden');
   main.classList.remove('hidden');
 
