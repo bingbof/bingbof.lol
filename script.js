@@ -3,6 +3,7 @@ const main           = document.getElementById('main');
 const enterBtn       = document.getElementById('enterBtn');
 const clickMeBtn     = document.getElementById('clickMeBtn');
 const welcome        = document.querySelector('.welcome');
+const entranceFlash  = document.getElementById('entranceFlash');
 const menuScreen     = document.getElementById('menuScreen');
 const entranceAudio  = document.getElementById('entranceAudio');
 const homeAudio      = document.getElementById('homeAudio');
@@ -13,7 +14,13 @@ const secretVideo    = document.getElementById('secretVideo');
 const ENTRANCE_VOLUME = 0.25;
 const HOME_VOLUME     = 0.50;
 const MENU_VOLUME     = 0.50;
-const SLIDE_MS        = 1000;       // home <-> menu slide duration (matches CSS)
+
+// if the user prefers reduced motion, snap the slide near-instant
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SLIDE_MS = prefersReducedMotion ? 200 : 1000;
+
+// persisted volume + mute prefs
+const AUDIO_PREFS_KEY = 'bingbof.audio';
 
 entranceAudio.volume = ENTRANCE_VOLUME;
 homeAudio.volume     = HOME_VOLUME;
@@ -117,6 +124,27 @@ async function setupAudioGraph() {
 let userVolume = 1.0;
 let isMuted    = false;
 
+// load persisted preferences (volume / mute) from localStorage if any
+try {
+  const raw = localStorage.getItem(AUDIO_PREFS_KEY);
+  if (raw) {
+    const saved = JSON.parse(raw);
+    if (typeof saved.volume === 'number' && saved.volume >= 0 && saved.volume <= 1) {
+      userVolume = saved.volume;
+    }
+    if (typeof saved.muted === 'boolean') isMuted = saved.muted;
+  }
+} catch (e) { /* ignore */ }
+
+function saveAudioPrefs() {
+  try {
+    localStorage.setItem(AUDIO_PREFS_KEY, JSON.stringify({
+      volume: userVolume,
+      muted:  isMuted,
+    }));
+  } catch (e) { /* ignore */ }
+}
+
 function effectiveVolume() {
   return (isMuted || userVolume === 0) ? 0 : userVolume;
 }
@@ -138,7 +166,10 @@ function applyFocusState() {
   }
 }
 
-document.addEventListener('visibilitychange', applyFocusState);
+document.addEventListener('visibilitychange', () => {
+  document.body.classList.toggle('tab-hidden', document.hidden);
+  applyFocusState();
+});
 window.addEventListener('blur',  applyFocusState);
 window.addEventListener('focus', applyFocusState);
 
@@ -244,6 +275,13 @@ async function enterSite() {
   landing.classList.add('hidden');
   main.classList.remove('hidden');
 
+  // white flash that fades to reveal the home screen
+  if (entranceFlash) {
+    entranceFlash.classList.remove('flash');
+    void entranceFlash.offsetWidth;  // restart animation if already played
+    entranceFlash.classList.add('flash');
+  }
+
   fadeOut(entranceAudio, 300);
 
   homeAudio.currentTime = 0;
@@ -348,6 +386,7 @@ if (volumeSlider) {
     isMuted = false; // dragging the slider unmutes
     syncVolumeUI();
     applyFocusState();
+    saveAudioPrefs();
     if (secretActive) secretVideo.muted = effectiveVolume() === 0;
   });
 }
@@ -364,6 +403,7 @@ if (muteBtn) {
     }
     syncVolumeUI();
     applyFocusState();
+    saveAudioPrefs();
     if (secretActive) secretVideo.muted = effectiveVolume() === 0;
     muteBtn.blur();
   });
@@ -571,6 +611,20 @@ if (audioScrubber) {
   audioScrubber.addEventListener('change', () => { isScrubbing = false; });
   audioScrubber.addEventListener('pointerup',   () => { isScrubbing = false; });
   audioScrubber.addEventListener('keyup',       () => { isScrubbing = false; });
+
+  // arrow-key seek: ±5s when the scrubber is focused
+  audioScrubber.addEventListener('keydown', (e) => {
+    if (!menuAudio || !isFinite(menuAudio.duration) || menuAudio.duration <= 0) return;
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      menuAudio.currentTime = Math.max(0, menuAudio.currentTime - 5);
+      updateAudioProgress();
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      menuAudio.currentTime = Math.min(menuAudio.duration, menuAudio.currentTime + 5);
+      updateAudioProgress();
+    }
+  });
 }
 
 if (menuAudio) {
@@ -673,5 +727,16 @@ window.addEventListener('keydown', (event) => {
 
   if (!landing.classList.contains('hidden') && (key === 'enter' || key === ' ')) {
     enterSite();
+    return;
+  }
+
+  // spacebar = play/pause toggle when on the menu (skip if focus is on a
+  // form control or button, since those already handle space as activation)
+  if (event.code === 'Space' && onMenu && menuAudio) {
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === 'BUTTON' || tag === 'INPUT' || tag === 'A' || tag === 'TEXTAREA') return;
+    event.preventDefault();
+    if (menuAudio.paused) menuAudio.play().catch(() => {});
+    else                  menuAudio.pause();
   }
 });

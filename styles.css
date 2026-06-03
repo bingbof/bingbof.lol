@@ -148,6 +148,22 @@ html, body {
   z-index: 0;
 }
 
+/* slight vignette over the home-screen bg video — sits above the video
+   but below the welcome logo + click-me so they read on top */
+#main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgba(0, 0, 0, 0.35) 85%,
+    rgba(0, 0, 0, 0.6) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
 .welcome {
   position: relative;
   z-index: 2;
@@ -172,7 +188,7 @@ html, body {
    at 0deg (facing forward) rather than wherever a continuous loop happened
    to land while they were on the landing screen */
 .welcome.spinning {
-  animation: welcome-spin 5s linear infinite;
+  animation: welcome-spin 3s linear infinite;
   -webkit-font-smoothing: none;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -468,7 +484,8 @@ html, body {
   align-items: stretch;
   gap: 0.45rem;
   z-index: 50;
-  width: min(360px, 70vw);
+  /* wide enough to fit the expanded volume slider without squishing siblings */
+  width: min(480px, 85vw);
 }
 
 .audio-progress {
@@ -683,6 +700,8 @@ html, body {
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
+  /* never let flex layout squish these into ovals */
+  flex-shrink: 0;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -707,9 +726,11 @@ html, body {
   font-family: 'Minecraft', Georgia, 'Times New Roman', serif;
   font-style: normal;
   font-weight: normal;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   line-height: 1;
-  transform: translateY(-1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .mute-btn .mute-icon-off { display: none; }
@@ -852,6 +873,27 @@ html, body {
 }
 
 /* ============================================================
+   ENTRANCE WHITE FLASH (fires once when the user clicks entrance)
+   ============================================================ */
+#entranceFlash {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 150;
+}
+
+#entranceFlash.flash {
+  animation: entrance-flash 0.7s ease-out forwards;
+}
+
+@keyframes entrance-flash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ============================================================
    SECRET / KONAMI VIDEO
    ============================================================ */
 .secret {
@@ -935,4 +977,59 @@ html, body {
   border-color: #fff;
   outline: none;
   box-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
+}
+
+/* ============================================================
+   TAB-HIDDEN — pause heavy CSS animations when the tab isn't visible
+   ============================================================ */
+body.tab-hidden .welcome.spinning,
+body.tab-hidden .stars-small,
+body.tab-hidden .stars-medium,
+body.tab-hidden .stars-large,
+body.tab-hidden .star {
+  animation-play-state: paused;
+}
+
+/* ============================================================
+   PREFERS-REDUCED-MOTION — kill the decorative motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .welcome.spinning,
+  .stars-small,
+  .stars-medium,
+  .stars-large,
+  .star {
+    animation: none !important;
+  }
+
+  #entranceFlash.flash {
+    animation: none !important;
+    opacity: 0;
+  }
+
+  #main {
+    transition: opacity 0.2s ease !important;
+  }
+
+  #main.slide-up {
+    opacity: 0;
+    transform: none;
+  }
+
+  .info-card {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
+/* ============================================================
+   RESPONSIVE — collapse the audio bar on smaller laptops
+   ============================================================ */
+@media (max-width: 900px) {
+  .viz-canvas {
+    display: none;
+  }
+  .audio-bar {
+    width: min(420px, 85vw);
+  }
 }

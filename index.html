@@ -10,17 +10,15 @@
   <div id="mobileOverlay" class="mobile-overlay" aria-hidden="true">
     <div class="mobile-card" role="dialog" aria-modal="true" aria-labelledby="mobileTitle">
       <h2 id="mobileTitle" class="mobile-title">heads up</h2>
-      <p class="mobile-message">bingbof.lol is best viewed on desktop. mobile works, but expect rough edges.</p>
+      <p class="mobile-message">bingbof.lol is best viewed on desktop. mobile works, but expect rough edges. if you're seeing this and you're on desktop, try making your browser window larger.</p>
       <button id="mobileDismissBtn" class="mobile-btn" type="button">continue anyway</button>
     </div>
   </div>
 
+  <div id="entranceFlash" aria-hidden="true"></div>
+
   <div id="landing" class="screen">
     <button id="enterBtn" class="enter">entrance...</button>
-    <p class="flash-warning" aria-label="Flashing visuals warning">
-      <span class="flash-warning-icon" aria-hidden="true">&#9888;</span>
-      contains brief flashing visuals
-    </p>
   </div>
 
   <div id="main" class="screen hidden">
@@ -41,11 +39,11 @@
     </div>
 
     <button id="backBtn" class="nav-btn nav-btn-top" type="button">
-      click me <span class="arrow arrow-up" aria-hidden="true">&#x25B2;</span>
+      back <span class="arrow arrow-up" aria-hidden="true">&#x25B2;</span>
     </button>
 
     <button id="viewBackBtn" class="nav-btn nav-btn-top" type="button">
-      <span class="arrow arrow-left" aria-hidden="true">&#x25C0;</span> click me
+      <span class="arrow arrow-left" aria-hidden="true">&#x25C0;</span> back
     </button>
 
     <div id="dateTime" class="date-time" aria-live="off">
@@ -196,7 +194,7 @@
 
   <audio id="entranceAudio" src="startloop.mp3" loop preload="auto"></audio>
   <audio id="homeAudio" src="homeloop_audio.mp3" loop preload="auto"></audio>
-  <audio id="menuAudio" src="menuloop_audio.mp3" loop preload="auto"></audio>
+  <audio id="menuAudio" src="menuloop_audio.mp3" loop preload="metadata"></audio>
 
   <script src="script.js"></script>
 </body>
