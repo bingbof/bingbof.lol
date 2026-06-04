@@ -69,7 +69,9 @@ let audioGraphReady  = false;
 let analyser         = null;
 let vizData          = null;
 
-async function setupAudioGraph() {
+// kept synchronous so iOS sees the entire setup inside a single user gesture;
+// awaiting anything here breaks the gesture chain and the tab plays silently.
+function setupAudioGraph() {
   if (audioGraphReady) return;
   audioGraphReady = true;
 
@@ -82,6 +84,17 @@ async function setupAudioGraph() {
     audioContext = null;
     return;
   }
+
+  // resume immediately (fire-and-forget) and force-unlock with a silent buffer.
+  // iOS suspends the context until a user gesture plays SOMETHING through it.
+  try { audioContext.resume(); } catch (e) { /* ignore */ }
+  try {
+    const silentBuf = audioContext.createBuffer(1, 1, 22050);
+    const silentSrc = audioContext.createBufferSource();
+    silentSrc.buffer = silentBuf;
+    silentSrc.connect(audioContext.destination);
+    silentSrc.start(0);
+  } catch (e) { /* ignore */ }
 
   const elements = [entranceAudio, homeAudio, menuAudio];
   for (const el of elements) {
@@ -102,22 +115,25 @@ async function setupAudioGraph() {
     }
   }
 
-  // analyser taps the menu audio's gain so the visualizer reacts to playback.
-  // larger fftSize gives more bins → log-spaced bars across the full spectrum
-  // instead of only the bass dominating the left side.
+  // analyser tap for the visualizer
   const menuNode = audioNodes.get(menuAudio);
   if (menuNode) {
     analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;          // 128 frequency bins
+    analyser.fftSize = 256;
     analyser.smoothingTimeConstant = 0.78;
     menuNode.gain.connect(analyser);
     vizData = new Uint8Array(analyser.frequencyBinCount);
   }
 
-  if (audioContext.state === 'suspended') {
-    try { await audioContext.resume(); } catch (e) { /* ignore */ }
-  }
   applyFocusState();
+}
+
+// keep re-attempting resume on any subsequent interaction until the context
+// actually transitions to "running" — iOS sometimes needs more than one gesture
+function ensureAudioContextRunning() {
+  if (!audioContext) return;
+  if (audioContext.state === 'running') return;
+  audioContext.resume().catch(() => {});
 }
 
 // ---------- volume + mute state ----------
@@ -173,12 +189,22 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('blur',  applyFocusState);
 window.addEventListener('focus', applyFocusState);
 
-async function onFirstInteraction() {
-  await setupAudioGraph();
+// kept fully sync so iOS sees both the graph creation and the play() call
+// inside the same user gesture
+function onFirstInteraction() {
+  setupAudioGraph();
   playEntranceAudio();
 }
 window.addEventListener('pointerdown', onFirstInteraction, { once: true });
+window.addEventListener('touchstart',  onFirstInteraction, { once: true });
 window.addEventListener('keydown',     onFirstInteraction, { once: true });
+
+// every later interaction also nudges the context back to running if it has
+// drifted back to "suspended" (iOS does this on lock, background, sometimes
+// just because)
+['pointerdown', 'touchstart', 'click', 'keydown'].forEach(evt => {
+  window.addEventListener(evt, ensureAudioContextRunning);
+});
 
 // ---------- secret video (triggered by 5x info-button click) ----------
 let secretActive = false;
@@ -1202,96 +1228,6 @@ function pollDesktopShake() {
 }
 
 setInterval(pollDesktopShake, 50);
-
-// ---------- MOBILE shake detection (DeviceMotionEvent) ----------
-let mobileMotionBound = false;
-let mobileMotionAccel = 0;
-let mobileLastAcc = { x: 0, y: 0, z: 0 };
-const MOBILE_SHAKE_THRESHOLD = 26;
-
-function handleDeviceMotion(event) {
-  if (!onMenu) return;
-  const a = event.accelerationIncludingGravity;
-  if (!a || a.x == null) return;
-  const dx = a.x - mobileLastAcc.x;
-  const dy = a.y - mobileLastAcc.y;
-  const dz = a.z - mobileLastAcc.z;
-  const mag = Math.sqrt(dx * dx + dy * dy + dz * dz);
-  mobileMotionAccel = mobileMotionAccel * 0.7 + mag * 0.3;
-  mobileLastAcc = { x: a.x, y: a.y, z: a.z };
-
-  // ongoing shake → apply impulse to all bodies
-  if (physicsActive) {
-    if (mag > 3) {
-      physicsApplyShake(-dx * 0.0008, dy * 0.0008);
-    }
-    return;
-  }
-
-  if (mobileMotionAccel > MOBILE_SHAKE_THRESHOLD) {
-    const intensity = Math.min(18, mobileMotionAccel + 8);
-    mobileMotionAccel = 0;
-    physicsActivate(intensity);
-  }
-}
-
-function bindDeviceMotionDirect() {
-  if (mobileMotionBound) return;
-  window.addEventListener('devicemotion', handleDeviceMotion);
-  mobileMotionBound = true;
-}
-
-// iOS 13+ requires DeviceMotionEvent.requestPermission() from a user gesture.
-// We can't detect shake without permission — so we use a touch-based proxy:
-// when the user's finger jitters rapidly across the screen (which happens
-// when they shake the phone while touching it), we trigger the permission
-// prompt. After that, devicemotion drives everything.
-let motionPermAsked = false;
-let touchShakeSamples = [];
-const TOUCH_SHAKE_WINDOW_MS = 450;
-const TOUCH_SHAKE_DISTANCE  = 380;
-
-async function requestMotionPermissionViaShake() {
-  if (motionPermAsked) return;
-  motionPermAsked = true;
-  if (typeof DeviceMotionEvent === 'undefined') return;
-  if (typeof DeviceMotionEvent.requestPermission !== 'function') {
-    bindDeviceMotionDirect();
-    return;
-  }
-  try {
-    const result = await DeviceMotionEvent.requestPermission();
-    if (result === 'granted') bindDeviceMotionDirect();
-  } catch (e) { /* user dismissed */ }
-}
-
-window.addEventListener('touchmove', (e) => {
-  if (!onMenu) return;
-  if (motionPermAsked) return;
-  // Only relevant for iOS-style permission-gated motion
-  if (typeof DeviceMotionEvent === 'undefined' ||
-      typeof DeviceMotionEvent.requestPermission !== 'function') return;
-  const t = e.touches[0];
-  if (!t) return;
-  const now = performance.now();
-  touchShakeSamples.push({ x: t.clientX, y: t.clientY, time: now });
-  touchShakeSamples = touchShakeSamples.filter(s => now - s.time < TOUCH_SHAKE_WINDOW_MS);
-  let dist = 0;
-  for (let i = 1; i < touchShakeSamples.length; i++) {
-    const a = touchShakeSamples[i - 1];
-    const b = touchShakeSamples[i];
-    dist += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
-  }
-  if (dist > TOUCH_SHAKE_DISTANCE && touchShakeSamples.length > 6) {
-    requestMotionPermissionViaShake();
-  }
-}, { passive: true });
-
-// On Android (and anything without the permission API), bind motion immediately.
-if (typeof DeviceMotionEvent !== 'undefined' &&
-    typeof DeviceMotionEvent.requestPermission !== 'function') {
-  bindDeviceMotionDirect();
-}
 
 // ---------- RESTORE when window becomes maximized again ----------
 function isWindowMaximized() {
