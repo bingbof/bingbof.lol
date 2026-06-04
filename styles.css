@@ -1033,3 +1033,26 @@ body.tab-hidden .star {
     width: min(420px, 85vw);
   }
 }
+
+/* ============================================================
+   PHYSICS / SHAKE EASTER EGG
+   When the user shakes the window (or device), .physics-active is set
+   on <body> and every grabbable menu element gets .physics-body.
+   The element is then driven by transform values written from JS.
+   ============================================================ */
+body.physics-active {
+  /* prevent pull-to-refresh and rubber-band on touch while physics is on */
+  overscroll-behavior: none;
+}
+
+body.physics-active .physics-body { cursor: grab; }
+body.physics-dragging,
+body.physics-dragging .physics-body { cursor: grabbing; }
+
+.physics-body {
+  transition: none !important;
+  will-change: transform;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}

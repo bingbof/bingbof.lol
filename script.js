@@ -740,3 +740,571 @@ window.addEventListener('keydown', (event) => {
     else                  menuAudio.pause();
   }
 });
+
+// =====================================================================
+// PHYSICS / SHAKE EASTER EGG
+// Shake a detached window (desktop) or shake the device (mobile) while the
+// menu is open → the buttons fall and collide. Drag them around. Restore
+// the window to full-screen / stop shaking and they spring back home.
+// =====================================================================
+const tapAudio   = document.getElementById('tapAudio');
+const crashAudio = document.getElementById('crashAudio');
+
+let physicsActive    = false;
+let physicsEngine    = null;
+let physicsBodies    = new Map();   // DOM element -> Matter.Body
+let physicsWalls     = [];
+let physicsRaf       = null;
+let physicsClickArmed = false;       // suppresses click after a drag
+
+// click guard — while physics is on, the buttons fall instead of opening views.
+// the sliders stay clickable (they're inside the audio-bar body which moves
+// with physics, but the input still works on top of it).
+document.addEventListener('click', (e) => {
+  if (!physicsActive) return;
+  const sliderHit = e.target.closest('input[type="range"], .mute-btn, .play-pause-btn');
+  if (sliderHit) return;
+  e.preventDefault();
+  e.stopPropagation();
+}, true);
+
+// ---------- which DOM elements become physics bodies ----------
+function getPhysicsElements() {
+  const list = [];
+  const push = (sel) => {
+    const el = (typeof sel === 'string') ? document.querySelector(sel) : sel;
+    if (el && el.getBoundingClientRect().width > 0) list.push(el);
+  };
+
+  push('#infoBtn');
+  push('.audio-bar');
+  push('#dateTime');
+
+  const view = menuScreen.dataset.view;
+  if (view === 'main') {
+    push('#backBtn');
+    document.querySelectorAll('.view-main .menu-btn').forEach(push);
+  } else {
+    push('#viewBackBtn');
+    const active = document.querySelector('.view-' + view);
+    if (active) {
+      const title = active.querySelector('.view-title');
+      if (title) push(title);
+      active.querySelectorAll('.social-link').forEach(push);
+    }
+  }
+
+  return list;
+}
+
+// ---------- engine setup ----------
+function physicsInit() {
+  if (typeof Matter === 'undefined') return false;
+  // higher iteration counts → much better collision resolution; objects
+  // stop tunnelling through each other when you push hard with the cursor
+  physicsEngine = Matter.Engine.create({
+    positionIterations: 10,
+    velocityIterations: 8,
+    constraintIterations: 4,
+  });
+  physicsEngine.gravity.y = 1.1;
+
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  const t = 200;
+  physicsWalls = [
+    Matter.Bodies.rectangle(w / 2,  -t / 2,     w * 3, t, { isStatic: true }),
+    Matter.Bodies.rectangle(w / 2,  h + t / 2,  w * 3, t, { isStatic: true }),
+    Matter.Bodies.rectangle(-t / 2, h / 2,      t,     h * 3, { isStatic: true }),
+    Matter.Bodies.rectangle(w + t / 2, h / 2,   t,     h * 3, { isStatic: true }),
+  ];
+  Matter.World.add(physicsEngine.world, physicsWalls);
+  return true;
+}
+
+// ---------- convert each visible element into a rigid body ----------
+function physicsBuildBodies(shakeImpulse) {
+  const elements = getPhysicsElements();
+  for (const el of elements) {
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) continue;
+
+    // remember original inline style so we can restore exactly
+    el.dataset.physicsPrevStyle = el.getAttribute('style') || '';
+
+    // freeze element at its current screen position
+    Object.assign(el.style, {
+      position: 'fixed',
+      top:      rect.top + 'px',
+      left:     rect.left + 'px',
+      right:    'auto',
+      bottom:   'auto',
+      width:    rect.width + 'px',
+      height:   rect.height + 'px',
+      margin:   '0',
+      zIndex:   '120',
+    });
+    el.classList.add('physics-body');
+
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top  + rect.height / 2;
+    // round elements (info button) get a real circle body so they can roll;
+    // rectangles get a slight chamfer for smoother contacts
+    let body;
+    if (el.id === 'infoBtn' || el.classList.contains('info-btn')) {
+      const radius = Math.min(rect.width, rect.height) / 2;
+      body = Matter.Bodies.circle(cx, cy, radius, {
+        restitution: 0.6,
+        friction:    0.05,
+        frictionAir: 0.012,
+        density:     0.002,
+      });
+    } else {
+      body = Matter.Bodies.rectangle(cx, cy, rect.width, rect.height, {
+        restitution: 0.4,
+        friction:    0.18,
+        frictionAir: 0.012,
+        density:     0.002,
+        chamfer:     { radius: 4 },
+      });
+    }
+
+    // initial kick — some random push from the shake intensity
+    const ix = (Math.random() - 0.5) * shakeImpulse;
+    const iy = -Math.random() * shakeImpulse * 0.4;
+    Matter.Body.setVelocity(body, { x: ix, y: iy });
+    Matter.Body.setAngularVelocity(body, (Math.random() - 0.5) * 0.3);
+
+    body.physicsEl = el;
+    body.physicsOriginCenter = { x: cx, y: cy };
+    physicsBodies.set(el, body);
+    Matter.World.add(physicsEngine.world, body);
+  }
+}
+
+// ---------- main loop ----------
+const PHYSICS_MAX_SPEED = 28;  // velocity clamp prevents tunnelling during a yank
+function physicsClampVelocities() {
+  for (const body of Matter.Composite.allBodies(physicsEngine.world)) {
+    if (body.isStatic) continue;
+    const vx = body.velocity.x, vy = body.velocity.y;
+    const speed = Math.sqrt(vx * vx + vy * vy);
+    if (speed > PHYSICS_MAX_SPEED) {
+      const s = PHYSICS_MAX_SPEED / speed;
+      Matter.Body.setVelocity(body, { x: vx * s, y: vy * s });
+    }
+    if (Math.abs(body.angularVelocity) > 0.6) {
+      Matter.Body.setAngularVelocity(body, Math.sign(body.angularVelocity) * 0.6);
+    }
+  }
+}
+
+function physicsTick(now) {
+  if (!physicsActive) { physicsRaf = null; return; }
+  const dt = Math.min(physicsTick.last ? now - physicsTick.last : 16, 33);
+  physicsTick.last = now;
+  Matter.Engine.update(physicsEngine, dt);
+  physicsClampVelocities();
+  for (const [el, body] of physicsBodies) {
+    const dx = body.position.x - body.physicsOriginCenter.x;
+    const dy = body.position.y - body.physicsOriginCenter.y;
+    el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px) rotate(' + body.angle + 'rad)';
+  }
+  physicsRaf = requestAnimationFrame(physicsTick);
+}
+
+// ---------- collision sound (tap.mp3 with pitch + volume jitter) ----------
+const TAP_VOICES = 6;
+let tapPool = [];
+let tapIdx  = 0;
+let lastTapAt = 0;
+const TAP_MIN_GAP_MS = 30;
+
+function setPreservesPitch(audio, value) {
+  // browsers diverge — set every variant
+  audio.preservesPitch       = value;
+  audio.mozPreservesPitch    = value;
+  audio.webkitPreservesPitch = value;
+}
+
+function physicsInitTapPool() {
+  if (tapPool.length || !tapAudio) return;
+  for (let i = 0; i < TAP_VOICES; i++) {
+    const v = tapAudio.cloneNode();
+    setPreservesPitch(v, false);  // playbackRate now changes pitch, not just speed
+    tapPool.push(v);
+  }
+}
+
+function physicsPlayTap(intensity) {
+  const now = performance.now();
+  if (now - lastTapAt < TAP_MIN_GAP_MS) return;
+  lastTapAt = now;
+  const voice = tapPool[tapIdx];
+  tapIdx = (tapIdx + 1) % TAP_VOICES;
+  if (!voice) return;
+  try {
+    voice.pause();
+    voice.currentTime = 0;
+    setPreservesPitch(voice, false);  // reassert each play — some browsers reset it
+    voice.playbackRate = 0.7 + Math.random() * 0.7;             // 0.7x – 1.4x → ~one octave swing
+    const base = 0.25 + Math.random() * 0.45 + intensity * 0.2; // 0.25 – 0.9 jitter
+    voice.volume = Math.min(0.95, base) * (isMuted ? 0 : userVolume);
+    voice.play().catch(() => {});
+  } catch (e) { /* ignore */ }
+}
+
+// Prime tap pool + crash audio on the first user interaction. On iOS / mobile,
+// cloned <audio> elements need to be played-and-paused inside a user gesture
+// or they're silently blocked when collisions try to fire them later.
+let physicsAudioPrimed = false;
+function primePhysicsAudio() {
+  if (physicsAudioPrimed) return;
+  physicsAudioPrimed = true;
+  physicsInitTapPool();
+  const prime = (a) => {
+    if (!a) return;
+    const wasMuted = a.muted;
+    a.muted = true;
+    const p = a.play();
+    if (p && typeof p.then === 'function') {
+      p.then(() => { a.pause(); a.currentTime = 0; a.muted = wasMuted; }).catch(() => { a.muted = wasMuted; });
+    } else {
+      a.pause(); a.currentTime = 0; a.muted = wasMuted;
+    }
+  };
+  for (const v of tapPool) prime(v);
+  prime(crashAudio);
+}
+['pointerdown', 'touchstart', 'keydown'].forEach(evt => {
+  window.addEventListener(evt, primePhysicsAudio, { once: true, capture: true });
+});
+
+function physicsBindCollisions() {
+  Matter.Events.on(physicsEngine, 'collisionStart', (event) => {
+    for (const pair of event.pairs) {
+      const a = pair.bodyA, b = pair.bodyB;
+      const dvx = a.velocity.x - b.velocity.x;
+      const dvy = a.velocity.y - b.velocity.y;
+      const rel = Math.sqrt(dvx * dvx + dvy * dvy);
+      if (rel > 1.4) physicsPlayTap(Math.min(rel / 5, 1));
+    }
+  });
+}
+
+// ---------- pointer-driven dragging (mouse + touch) ----------
+let dragConstraint = null;
+let dragBody = null;
+let dragMoved = false;
+
+function physicsDragPos(e) {
+  if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  if (e.changedTouches && e.changedTouches[0]) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+  return { x: e.clientX, y: e.clientY };
+}
+
+function physicsDragStart(e) {
+  if (!physicsActive) return;
+  // don't intercept slider / mute / play-pause interactions
+  if (e.target.closest('input[type="range"], .mute-btn, .play-pause-btn')) return;
+
+  const pos = physicsDragPos(e);
+  const all = Matter.Composite.allBodies(physicsEngine.world);
+  const hit = Matter.Query.point(all, pos).find(b => !b.isStatic);
+  if (!hit) return;
+
+  dragBody = hit;
+  dragMoved = false;
+  // soft constraint = less violent contact forces against neighbours
+  dragConstraint = Matter.Constraint.create({
+    pointA: { x: pos.x, y: pos.y },
+    bodyB:  hit,
+    pointB: { x: pos.x - hit.position.x, y: pos.y - hit.position.y },
+    stiffness: 0.08,
+    damping:   0.25,
+    length:    0,
+  });
+  Matter.World.add(physicsEngine.world, dragConstraint);
+  document.body.classList.add('physics-dragging');
+  // prevent the page from accidentally scrolling on touch
+  if (e.cancelable) e.preventDefault();
+}
+
+function physicsDragMove(e) {
+  if (!dragConstraint) return;
+  const pos = physicsDragPos(e);
+  const oldA = dragConstraint.pointA;
+  if (Math.abs(pos.x - oldA.x) + Math.abs(pos.y - oldA.y) > 3) dragMoved = true;
+  dragConstraint.pointA.x = pos.x;
+  dragConstraint.pointA.y = pos.y;
+  if (e.cancelable) e.preventDefault();
+}
+
+function physicsDragEnd() {
+  if (dragConstraint) Matter.World.remove(physicsEngine.world, dragConstraint);
+  dragConstraint = null;
+  dragBody = null;
+  document.body.classList.remove('physics-dragging');
+}
+
+function physicsBindPointer() {
+  window.addEventListener('mousedown',   physicsDragStart, true);
+  window.addEventListener('mousemove',   physicsDragMove);
+  window.addEventListener('mouseup',     physicsDragEnd);
+  window.addEventListener('touchstart',  physicsDragStart, { passive: false, capture: true });
+  window.addEventListener('touchmove',   physicsDragMove,  { passive: false });
+  window.addEventListener('touchend',    physicsDragEnd);
+}
+
+function physicsUnbindPointer() {
+  window.removeEventListener('mousedown',  physicsDragStart, true);
+  window.removeEventListener('mousemove',  physicsDragMove);
+  window.removeEventListener('mouseup',    physicsDragEnd);
+  window.removeEventListener('touchstart', physicsDragStart, { capture: true });
+  window.removeEventListener('touchmove',  physicsDragMove);
+  window.removeEventListener('touchend',   physicsDragEnd);
+}
+
+// ---------- activate / restore ----------
+function physicsActivate(intensity) {
+  if (physicsActive) return;
+  if (!onMenu) return;
+  if (!physicsInit()) return;
+
+  physicsActive = true;
+  document.body.classList.add('physics-active');
+
+  // sudden cut to music + crash
+  if (menuAudio) {
+    try { menuAudio.pause(); } catch (e) { /* ignore */ }
+  }
+  if (crashAudio) {
+    try {
+      crashAudio.currentTime = 0;
+      // half-volume so it's a thud, not a jumpscare
+      crashAudio.volume = (isMuted || userVolume === 0) ? 0 : userVolume * 0.5;
+      crashAudio.play().catch(() => {});
+    } catch (e) { /* ignore */ }
+  }
+
+  physicsInitTapPool();
+  physicsBuildBodies(intensity || 8);
+  physicsBindCollisions();
+  physicsBindPointer();
+
+  physicsTick.last = 0;
+  physicsRaf = requestAnimationFrame(physicsTick);
+}
+
+function physicsRestore() {
+  if (!physicsActive) return;
+  physicsActive = false;
+  if (physicsRaf) cancelAnimationFrame(physicsRaf);
+  physicsRaf = null;
+
+  physicsUnbindPointer();
+
+  // spring elements back to their original DOM position
+  const settled = [];
+  for (const [el, body] of physicsBodies) {
+    el.style.transition = 'transform 0.55s cubic-bezier(0.3, 0, 0.3, 1)';
+    el.style.transform  = 'translate(0, 0) rotate(0deg)';
+    settled.push(new Promise(r => setTimeout(r, 560)));
+  }
+
+  Promise.all(settled).then(() => {
+    for (const [el] of physicsBodies) {
+      const prev = el.dataset.physicsPrevStyle || '';
+      if (prev) el.setAttribute('style', prev);
+      else      el.removeAttribute('style');
+      delete el.dataset.physicsPrevStyle;
+      el.classList.remove('physics-body');
+    }
+    physicsBodies.clear();
+    if (physicsEngine) {
+      Matter.World.clear(physicsEngine.world, false);
+      Matter.Engine.clear(physicsEngine);
+      physicsEngine = null;
+    }
+    physicsWalls = [];
+    document.body.classList.remove('physics-active');
+
+    // resume the song where it left off (only on the menu)
+    if (onMenu && menuAudio && menuAudio.paused) {
+      menuAudio.play().catch(() => {});
+    }
+  });
+}
+
+// ---------- apply a directional impulse to every body (ongoing shake) ----------
+function physicsApplyShake(forceX, forceY) {
+  if (!physicsEngine) return;
+  for (const body of Matter.Composite.allBodies(physicsEngine.world)) {
+    if (body.isStatic) continue;
+    Matter.Body.applyForce(body, body.position, {
+      x: forceX * body.mass,
+      y: forceY * body.mass,
+    });
+  }
+}
+
+// ---------- DESKTOP shake detection (poll window.screenX / screenY) ----------
+let shakeLastX = (typeof window.screenX === 'number') ? window.screenX : 0;
+let shakeLastY = (typeof window.screenY === 'number') ? window.screenY : 0;
+let shakeSamples = [];
+const SHAKE_WINDOW_MS = 600;
+const SHAKE_MIN_CHANGES = 4;
+const SHAKE_MIN_DISTANCE = 140;
+
+function pollDesktopShake() {
+  if (!onMenu) return;
+  const sx = window.screenX;
+  const sy = window.screenY;
+  const dx = sx - shakeLastX;
+  const dy = sy - shakeLastY;
+  shakeLastX = sx;
+  shakeLastY = sy;
+
+  // if physics is already on, keep applying impulses while the user shakes
+  if (physicsActive) {
+    const m = Math.abs(dx) + Math.abs(dy);
+    if (m > 3) {
+      // opposite-direction force — objects feel inertia as the window moves
+      physicsApplyShake(-dx * 0.0008, -dy * 0.0008);
+    }
+    return;
+  }
+
+  const now = performance.now();
+  if (Math.abs(dx) + Math.abs(dy) > 1) {
+    shakeSamples.push({ dx, dy, time: now });
+  }
+  shakeSamples = shakeSamples.filter(s => now - s.time < SHAKE_WINDOW_MS);
+
+  let changes = 0;
+  let signX = 0, signY = 0;
+  let totalDist = 0;
+  for (const s of shakeSamples) {
+    const sX = Math.sign(s.dx);
+    const sY = Math.sign(s.dy);
+    if (sX !== 0 && sX !== signX) changes++;
+    if (sY !== 0 && sY !== signY) changes++;
+    if (sX !== 0) signX = sX;
+    if (sY !== 0) signY = sY;
+    totalDist += Math.sqrt(s.dx * s.dx + s.dy * s.dy);
+  }
+
+  if (changes >= SHAKE_MIN_CHANGES && totalDist > SHAKE_MIN_DISTANCE) {
+    const intensity = Math.min(20, 6 + totalDist / 40);
+    shakeSamples = [];
+    physicsActivate(intensity);
+  }
+}
+
+setInterval(pollDesktopShake, 50);
+
+// ---------- MOBILE shake detection (DeviceMotionEvent) ----------
+let mobileMotionBound = false;
+let mobileMotionAccel = 0;
+let mobileLastAcc = { x: 0, y: 0, z: 0 };
+const MOBILE_SHAKE_THRESHOLD = 26;
+
+function handleDeviceMotion(event) {
+  if (!onMenu) return;
+  const a = event.accelerationIncludingGravity;
+  if (!a || a.x == null) return;
+  const dx = a.x - mobileLastAcc.x;
+  const dy = a.y - mobileLastAcc.y;
+  const dz = a.z - mobileLastAcc.z;
+  const mag = Math.sqrt(dx * dx + dy * dy + dz * dz);
+  mobileMotionAccel = mobileMotionAccel * 0.7 + mag * 0.3;
+  mobileLastAcc = { x: a.x, y: a.y, z: a.z };
+
+  // ongoing shake → apply impulse to all bodies
+  if (physicsActive) {
+    if (mag > 3) {
+      physicsApplyShake(-dx * 0.0008, dy * 0.0008);
+    }
+    return;
+  }
+
+  if (mobileMotionAccel > MOBILE_SHAKE_THRESHOLD) {
+    const intensity = Math.min(18, mobileMotionAccel + 8);
+    mobileMotionAccel = 0;
+    physicsActivate(intensity);
+  }
+}
+
+function bindDeviceMotionDirect() {
+  if (mobileMotionBound) return;
+  window.addEventListener('devicemotion', handleDeviceMotion);
+  mobileMotionBound = true;
+}
+
+// iOS 13+ requires DeviceMotionEvent.requestPermission() from a user gesture.
+// We can't detect shake without permission — so we use a touch-based proxy:
+// when the user's finger jitters rapidly across the screen (which happens
+// when they shake the phone while touching it), we trigger the permission
+// prompt. After that, devicemotion drives everything.
+let motionPermAsked = false;
+let touchShakeSamples = [];
+const TOUCH_SHAKE_WINDOW_MS = 450;
+const TOUCH_SHAKE_DISTANCE  = 380;
+
+async function requestMotionPermissionViaShake() {
+  if (motionPermAsked) return;
+  motionPermAsked = true;
+  if (typeof DeviceMotionEvent === 'undefined') return;
+  if (typeof DeviceMotionEvent.requestPermission !== 'function') {
+    bindDeviceMotionDirect();
+    return;
+  }
+  try {
+    const result = await DeviceMotionEvent.requestPermission();
+    if (result === 'granted') bindDeviceMotionDirect();
+  } catch (e) { /* user dismissed */ }
+}
+
+window.addEventListener('touchmove', (e) => {
+  if (!onMenu) return;
+  if (motionPermAsked) return;
+  // Only relevant for iOS-style permission-gated motion
+  if (typeof DeviceMotionEvent === 'undefined' ||
+      typeof DeviceMotionEvent.requestPermission !== 'function') return;
+  const t = e.touches[0];
+  if (!t) return;
+  const now = performance.now();
+  touchShakeSamples.push({ x: t.clientX, y: t.clientY, time: now });
+  touchShakeSamples = touchShakeSamples.filter(s => now - s.time < TOUCH_SHAKE_WINDOW_MS);
+  let dist = 0;
+  for (let i = 1; i < touchShakeSamples.length; i++) {
+    const a = touchShakeSamples[i - 1];
+    const b = touchShakeSamples[i];
+    dist += Math.sqrt((b.x - a.x) ** 2 + (b.y - a.y) ** 2);
+  }
+  if (dist > TOUCH_SHAKE_DISTANCE && touchShakeSamples.length > 6) {
+    requestMotionPermissionViaShake();
+  }
+}, { passive: true });
+
+// On Android (and anything without the permission API), bind motion immediately.
+if (typeof DeviceMotionEvent !== 'undefined' &&
+    typeof DeviceMotionEvent.requestPermission !== 'function') {
+  bindDeviceMotionDirect();
+}
+
+// ---------- RESTORE when window becomes maximized again ----------
+function isWindowMaximized() {
+  if (!screen || !screen.availWidth) return false;
+  return Math.abs(window.outerWidth  - screen.availWidth)  < 40 &&
+         Math.abs(window.outerHeight - screen.availHeight) < 60;
+}
+
+let restoreTimer = null;
+window.addEventListener('resize', () => {
+  if (!physicsActive) return;
+  clearTimeout(restoreTimer);
+  restoreTimer = setTimeout(() => {
+    if (isWindowMaximized()) physicsRestore();
+  }, 220);
+});
