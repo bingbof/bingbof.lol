@@ -1,19 +1,9 @@
 /* ============================================================
-   CUSTOM FONTS
-   Drop the font files at the paths below and they'll load on page load.
-   Falls back to Cascadia Mono / monospace if the files are missing.
+   CUSTOM FONT — chicago.ttf sits in repo root
    ============================================================ */
 @font-face {
-  font-family: 'Arialic Hollow';
-  src: url('fonts/arialic-hollow.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Minecraft';
-  src: url('fonts/minecraft.otf') format('opentype');
+  font-family: 'Chicago';
+  src: url('chicago.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -26,30 +16,30 @@ html, body {
   height: 100%;
   background: #000;
   color: #fff;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, 'Courier New', monospace;
   overflow: hidden;
 }
 
+/* ============================================================
+   SCREEN UTILITY — screens cross-fade via .hidden
+   ============================================================ */
 .screen {
   position: fixed;
   inset: 0;
   display: grid;
   place-items: center;
+  transition: opacity 0.4s ease;
 }
 
 .hidden {
   opacity: 0;
-  visibility: hidden;
   pointer-events: none;
 }
 
-/* used to apply a class change without triggering its CSS transition */
-.no-anim {
-  transition: none !important;
-}
+.no-anim { transition: none !important; }
 
 /* ============================================================
-   UNIFIED BUTTON STYLES
+   UNIFIED BUTTON BASE
    ============================================================ */
 .btn,
 .enter,
@@ -63,7 +53,7 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.55);
   color: #fff;
   font: inherit;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, 'Courier New', monospace;
   cursor: pointer;
   letter-spacing: 0.05em;
   text-decoration: none;
@@ -87,7 +77,7 @@ html, body {
   box-shadow: 0 0 18px rgba(255, 255, 255, 0.45);
 }
 
-/* arrows — thicker static triangles, no bounce animation */
+/* arrows — thicker static triangles */
 .arrow {
   display: inline-block;
   font-size: 0.9em;
@@ -96,61 +86,99 @@ html, body {
   position: relative;
   top: -0.05em;
 }
-
 .arrow-down  { margin-left: 0.5rem; }
 .arrow-up    { margin-left: 0.5rem; }
 .arrow-left  { margin-right: 0.5rem; }
 
 /* ============================================================
-   LANDING / ENTRANCE
+   LANDING
    ============================================================ */
 #landing {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.7rem;
 }
 
 .enter {
-  font-size: 1.25rem;
-  padding: 0.75rem 1.5rem;
-}
-
-.flash-warning {
-  margin: 0;
-  padding: 0;
-  font-size: 0.7rem;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
-  text-align: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.flash-warning-icon {
-  font-size: 0.85rem;
-  letter-spacing: 0;
-  color: rgba(255, 200, 90, 0.55);
+  font-size: 1.5rem;
+  padding: 0.8rem 1.6rem;
 }
 
 /* ============================================================
-   HOME SCREEN
+   INTRO (actor_intro.mp4 + skip button)
    ============================================================ */
+#intro {
+  z-index: 10;
+}
+
+.intro-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.skip-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: rgba(255, 255, 255, 0.28);
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  padding: 0.45rem 1.1rem;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  z-index: 12;
+  transition: color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+.skip-btn:hover, .skip-btn:focus-visible {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.35);
+  outline: none;
+}
+
+/* ============================================================
+   HOME (actor_home.mp4 + spinning bingbof.lol + click-me)
+   ============================================================ */
+#home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  z-index: 20;
+  /* perspective lives on #home so the welcome's rotateY has depth */
+  perspective: 1600px;
+  perspective-origin: 50% 50%;
+  /* filter transitions for the menu-open blur */
+  transition: opacity 0.4s ease, filter 0.45s ease;
+}
+
+#home.menu-open {
+  filter: blur(14px) brightness(0.55);
+}
+
 .bg-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: fill;
+  object-fit: cover;
   z-index: 0;
 }
 
-/* slight vignette over the home-screen bg video — sits above the video
-   but below the welcome logo + click-me so they read on top */
-#main::before {
+/* slight vignette on the home bg */
+#home::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -169,7 +197,7 @@ html, body {
   z-index: 2;
   margin: 0;
   padding: 0;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, monospace;
   font-size: clamp(4rem, 14vw, 11rem);
   line-height: 1.1;
   letter-spacing: 0.05em;
@@ -177,43 +205,19 @@ html, body {
   text-align: center;
   display: inline-block;
   color: #ffffff;
-  /* welcome sits directly in #main's stacking context next to bg-video,
-     so the difference blend inverts the full glyph shapes against it */
+  /* invert against whatever's behind it */
   mix-blend-mode: difference;
   backface-visibility: visible;
   will-change: transform;
 }
 
-/* spin only kicks in once the user clicks entrance, so it always starts
-   at 0deg (facing forward) rather than wherever a continuous loop happened
-   to land while they were on the landing screen */
 .welcome.spinning {
   animation: welcome-spin 3s linear infinite;
-  -webkit-font-smoothing: none;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 @keyframes welcome-spin {
-  from { transform: rotateY(0deg); }
+  from { transform: rotateY(0deg);   }
   to   { transform: rotateY(360deg); }
-}
-
-#main {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.5rem;
-  z-index: 30;
-  /* perspective lives on #main so the welcome's rotateY has depth without
-     introducing an intermediate stacking context (which would break the blend) */
-  perspective: 1600px;
-  perspective-origin: 50% 50%;
-  transition: transform 1s cubic-bezier(0.7, 0, 0.3, 1);
-}
-
-#main.slide-up {
-  transform: translateY(-100%);
 }
 
 .click-me {
@@ -224,7 +228,6 @@ html, body {
   font-size: 1rem;
   padding: 0.5rem 1.2rem;
   z-index: 4;
-  /* opacity needs its own transition so the 3s-delay first-visit reveal fades */
   transition: opacity 0.6s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
@@ -235,23 +238,16 @@ html, body {
 .click-me.hidden-initial {
   opacity: 0;
   pointer-events: none;
-  /* no fade-OUT when the class is initially applied — only fade-IN when removed */
   transition: none;
 }
 
 /* ============================================================
-   MENU SCREEN
+   MENU OVERLAY — transparent, sits on top of the blurred home
    ============================================================ */
-#menuScreen {
+.menu-overlay {
   position: fixed;
   inset: 0;
-  background:
-    radial-gradient(ellipse at 25% 30%, rgba(80, 30, 140, 0.50), transparent 55%),
-    radial-gradient(ellipse at 80% 70%, rgba(190, 50, 130, 0.32), transparent 55%),
-    radial-gradient(ellipse at 50% 100%, rgba(30, 70, 170, 0.45), transparent 60%),
-    radial-gradient(ellipse at 95% 10%, rgba(40, 200, 220, 0.18), transparent 55%),
-    #03020a;
-  z-index: 20;
+  z-index: 40;
   display: grid;
   place-items: center;
   opacity: 0;
@@ -260,74 +256,12 @@ html, body {
   overflow: hidden;
 }
 
-#menuScreen.show {
+.menu-overlay.show {
   opacity: 1;
   pointer-events: auto;
 }
 
-/* vignette */
-#menuScreen::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 35%,
-    rgba(0, 0, 0, 0.55) 80%,
-    rgba(0, 0, 0, 0.85) 100%
-  );
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* starfield */
-.space-bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-}
-
-.stars {
-  position: absolute;
-  inset: 0;
-  will-change: transform;
-}
-
-.stars-small  { animation: drift-a 220s ease-in-out infinite; }
-.stars-medium { animation: drift-b 140s ease-in-out infinite; }
-.stars-large  { animation: drift-c  90s ease-in-out infinite; }
-
-@keyframes drift-a {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: -40px 25px; }
-}
-@keyframes drift-b {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: 35px -20px; }
-}
-@keyframes drift-c {
-  0%, 100% { translate: 0 0; }
-  50%      { translate: -15px 12px; }
-}
-
-.star {
-  position: absolute;
-  background: #fff;
-  border-radius: 50%;
-  animation: twinkle ease-in-out infinite;
-}
-
-.stars-small .star  { width: 1px; height: 1px; opacity: 0.7; }
-.stars-medium .star { width: 2px; height: 2px; box-shadow: 0 0 4px rgba(255, 255, 255, 0.8); }
-.stars-large  .star { width: 3px; height: 3px; box-shadow: 0 0 10px rgba(255, 255, 255, 0.95), 0 0 22px rgba(180, 150, 255, 0.55); }
-
-@keyframes twinkle {
-  0%, 100% { opacity: 0.25; transform: scale(0.8); }
-  50%      { opacity: 1;    transform: scale(1.15); }
-}
-
-/* nav buttons (top-of-screen back/click-me on the menu) */
+/* top-center nav button (back) */
 .nav-btn-top {
   position: absolute;
   top: 1.5rem;
@@ -342,9 +276,10 @@ html, body {
   transform: translateX(-50%);
 }
 
-#menuScreen[data-view="main"] #viewBackBtn { display: none; }
-#menuScreen:not([data-view="main"]) #backBtn { display: none; }
+.menu-overlay[data-view="main"] #viewBackBtn { display: none; }
+.menu-overlay:not([data-view="main"]) #backBtn { display: none; }
 
+/* sub-view stage */
 .view-stage {
   position: absolute;
   inset: 0;
@@ -366,18 +301,14 @@ html, body {
   box-sizing: border-box;
 }
 
-#menuScreen.show[data-view="main"]    .view-main,
-#menuScreen.show[data-view="socials"] .view-socials,
-#menuScreen.show[data-view="friends"] .view-friends {
+.menu-overlay.show[data-view="main"]    .view-main,
+.menu-overlay.show[data-view="socials"] .view-socials,
+.menu-overlay.show[data-view="friends"] .view-friends {
   opacity: 1;
   pointer-events: auto;
 }
 
-#menuScreen:not(.show) #backBtn,
-#menuScreen:not(.show) #viewBackBtn {
-  display: none;
-}
-
+/* main view: stacked socials.../friends... buttons */
 .menu-buttons {
   display: flex;
   flex-direction: column;
@@ -388,7 +319,7 @@ html, body {
 .menu-btn {
   font-size: 1.4rem;
   padding: 0.85rem 0;
-  width: 240px;
+  width: 260px;
 }
 
 .view-title {
@@ -444,7 +375,8 @@ html, body {
 }
 
 /* ============================================================
-   DATE / TIME (top-right of menu)
+   DATE / TIME (top-right of menu) — lives inside #menuOverlay
+   so it inherits the overlay's fade-in
    ============================================================ */
 .date-time {
   position: fixed;
@@ -452,7 +384,7 @@ html, body {
   right: 1.2rem;
   z-index: 50;
   text-align: right;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, monospace;
   pointer-events: none;
 }
 
@@ -473,215 +405,7 @@ html, body {
 }
 
 /* ============================================================
-   AUDIO BAR (bottom-right of menu): viz, now-playing, volume
-   ============================================================ */
-.audio-bar {
-  position: fixed;
-  bottom: 1rem;
-  right: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.45rem;
-  z-index: 50;
-  /* wide enough to fit the expanded volume slider without squishing siblings */
-  width: min(480px, 85vw);
-}
-
-.audio-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.62rem;
-  letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.55);
-  font-variant-numeric: tabular-nums;
-}
-
-.audio-time {
-  min-width: 2.6em;
-  text-align: center;
-}
-
-.audio-time-current { color: #fff; }
-
-/* The input element is 22px tall (generous hit target) but the visible
-   track is rendered via pseudo-elements at 4px, vertically centered. */
-.audio-scrubber {
-  flex: 1;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 22px;
-  margin: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  cursor: pointer;
-}
-
-.audio-scrubber::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    #fff 0,
-    #fff var(--seek-pct, 0%),
-    rgba(255, 255, 255, 0.22) var(--seek-pct, 0%),
-    rgba(255, 255, 255, 0.22) 100%
-  );
-  cursor: pointer;
-}
-
-.audio-scrubber::-moz-range-track {
-  height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(
-    to right,
-    #fff 0,
-    #fff var(--seek-pct, 0%),
-    rgba(255, 255, 255, 0.22) var(--seek-pct, 0%),
-    rgba(255, 255, 255, 0.22) 100%
-  );
-  cursor: pointer;
-}
-
-.audio-scrubber::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-  /* center the thumb on the 4px track inside a 22px-tall input */
-  margin-top: -4px;
-}
-
-.audio-scrubber::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-}
-
-.audio-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
-  justify-content: flex-end;
-}
-
-.viz-canvas {
-  display: block;
-  width: 80px;
-  height: 22px;
-  opacity: 0.85;
-}
-
-.now-playing {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  text-align: right;
-  line-height: 1.15;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, 'Courier New', monospace;
-}
-
-.np-label {
-  font-size: 0.55rem;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
-}
-
-.np-title {
-  font-size: 0.82rem;
-  letter-spacing: 0.04em;
-  color: #fff;
-  white-space: nowrap;
-}
-
-.np-artist {
-  font-size: 0.72rem;
-  letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.65);
-  white-space: nowrap;
-}
-
-.volume-control {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-.volume-slider {
-  width: 0;
-  opacity: 0;
-  margin: 0;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 3px;
-  background: linear-gradient(
-    to right,
-    #fff 0,
-    #fff var(--vol-pct, 60%),
-    rgba(255, 255, 255, 0.22) var(--vol-pct, 60%),
-    rgba(255, 255, 255, 0.22) 100%
-  );
-  border-radius: 2px;
-  outline: none;
-  pointer-events: none;
-  cursor: pointer;
-  transition: width 0.25s ease, opacity 0.22s ease, margin 0.25s ease;
-}
-
-.volume-control:hover .volume-slider,
-.volume-control:focus-within .volume-slider {
-  width: 90px;
-  opacity: 1;
-  margin-right: 0.55rem;
-  pointer-events: auto;
-}
-
-.volume-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  cursor: pointer;
-  border: none;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-}
-
-.volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
-  background: #fff;
-  border-radius: 50%;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
-}
-
-/* hide audio-bar/date-time when menu isn't visible */
-#menuScreen:not(.show) ~ .audio-bar,
-#menuScreen:not(.show) ~ .date-time,
-#menuScreen:not(.show) .audio-bar,
-#menuScreen:not(.show) .date-time {
-  display: none;
-}
-
-/* ============================================================
-   CORNER ICON BUTTONS (info bottom-left)
+   CORNER INFO BUTTON
    ============================================================ */
 .icon-btn {
   display: inline-flex;
@@ -695,12 +419,11 @@ html, body {
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 50%;
   color: #fff;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, 'Courier New', monospace;
   font-size: 0.95rem;
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  /* never let flex layout squish these into ovals */
   flex-shrink: 0;
   transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -721,9 +444,8 @@ html, body {
 
 .info-btn { left: 1rem; }
 
-/* the "different i" — serif italic, distinct from the menu's mono font */
 .info-glyph {
-  font-family: 'Minecraft', Georgia, 'Times New Roman', serif;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, monospace;
   font-style: normal;
   font-weight: normal;
   font-size: 1.1rem;
@@ -733,19 +455,8 @@ html, body {
   justify-content: center;
 }
 
-.mute-btn .mute-icon-off { display: none; }
-.mute-btn.muted .mute-icon-on { display: none; }
-.mute-btn.muted .mute-icon-off { display: inline-block; }
-
-/* play/pause button — pause icon shown while playing, play icon when paused */
-.play-pause-btn .pp-icon-play { display: none; }
-.play-pause-btn.paused .pp-icon-pause { display: none; }
-.play-pause-btn.paused .pp-icon-play { display: inline-block; }
-
-#menuScreen:not(.show) .corner-btn { display: none; }
-
 /* ============================================================
-   INFO OVERLAY
+   INFO OVERLAY (about)
    ============================================================ */
 .info-overlay {
   position: fixed;
@@ -772,19 +483,19 @@ html, body {
 .info-card {
   position: relative;
   width: min(460px, 92vw);
-  background: #050507;
+  background: rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.45);
   padding: 2.2rem 2rem 1.6rem;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, 'Courier New', monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, monospace;
   color: #fff;
   box-sizing: border-box;
   transform: translateY(8px);
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.info-overlay.show .info-card {
-  transform: translateY(0);
-}
+.info-overlay.show .info-card { transform: translateY(0); }
 
 .info-close {
   position: absolute;
@@ -847,6 +558,35 @@ html, body {
   letter-spacing: 0.04em;
 }
 
+.info-action-btn {
+  display: block;
+  width: 100%;
+  margin: 0 0 1.2rem;
+  padding: 0.55rem 1.2rem;
+  background: rgba(0, 0, 0, 0.35);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  text-align: center;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.info-action-btn:hover, .info-action-btn:focus-visible {
+  background: #fff;
+  color: #000;
+  border-color: #fff;
+  outline: none;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.4);
+}
+
 .info-credit {
   margin: 0;
   padding-top: 1rem;
@@ -870,27 +610,6 @@ html, body {
   color: #fff;
   text-decoration-color: rgba(255, 255, 255, 0.7);
   outline: none;
-}
-
-/* ============================================================
-   ENTRANCE WHITE FLASH (fires once when the user clicks entrance)
-   ============================================================ */
-#entranceFlash {
-  position: fixed;
-  inset: 0;
-  background: #ffffff;
-  opacity: 0;
-  pointer-events: none;
-  z-index: 150;
-}
-
-#entranceFlash.flash {
-  animation: entrance-flash 0.7s ease-out forwards;
-}
-
-@keyframes entrance-flash {
-  0%   { opacity: 1; }
-  100% { opacity: 0; }
 }
 
 /* ============================================================
@@ -936,7 +655,7 @@ html, body {
   background: #050507;
   border: 1px solid rgba(255, 255, 255, 0.45);
   padding: 2rem 1.6rem;
-  font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+  font-family: 'Chicago', 'Cascadia Mono', Consolas, monospace;
   color: #fff;
   text-align: center;
   box-sizing: border-box;
@@ -980,79 +699,22 @@ html, body {
 }
 
 /* ============================================================
-   TAB-HIDDEN — pause heavy CSS animations when the tab isn't visible
+   TAB-HIDDEN — pause CSS animations when tab isn't visible
    ============================================================ */
-body.tab-hidden .welcome.spinning,
-body.tab-hidden .stars-small,
-body.tab-hidden .stars-medium,
-body.tab-hidden .stars-large,
-body.tab-hidden .star {
+body.tab-hidden .welcome.spinning {
   animation-play-state: paused;
 }
 
 /* ============================================================
-   PREFERS-REDUCED-MOTION — kill the decorative motion
+   PREFERS-REDUCED-MOTION
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
-  .welcome.spinning,
-  .stars-small,
-  .stars-medium,
-  .stars-large,
-  .star {
-    animation: none !important;
-  }
+  .welcome.spinning { animation: none !important; }
 
-  #entranceFlash.flash {
-    animation: none !important;
-    opacity: 0;
-  }
+  #home { transition: opacity 0.2s ease !important; }
+  #home.menu-open { filter: brightness(0.6); }  /* drop the blur transition */
 
-  #main {
-    transition: opacity 0.2s ease !important;
-  }
-
-  #main.slide-up {
-    opacity: 0;
-    transform: none;
-  }
-
-  .info-card {
-    transition: none !important;
-    transform: none !important;
-  }
-}
-
-/* ============================================================
-   RESPONSIVE — collapse the audio bar on smaller laptops
-   ============================================================ */
-@media (max-width: 900px) {
-  .viz-canvas {
-    display: none;
-  }
-  .audio-bar {
-    width: min(420px, 85vw);
-  }
-}
-
-/* ============================================================
-   PHYSICS / SHAKE EASTER EGG
-   When the user shakes the window (or device), .physics-active is set
-   on <body> and every grabbable menu element gets .physics-body.
-   The element is then driven by transform values written from JS.
-   ============================================================ */
-body.physics-active {
-  /* prevent pull-to-refresh and rubber-band on touch while physics is on */
-  overscroll-behavior: none;
-}
-
-body.physics-active .physics-body { cursor: grab; }
-body.physics-dragging,
-body.physics-dragging .physics-body { cursor: grabbing; }
-
-.physics-body {
-  transition: none !important;
-  will-change: transform;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
+  .menu-overlay { transition: opacity 0.15s ease !important; }
+  .info-card { transition: none !important; transform: none !important; }
+  .screen { transition: opacity 0.15s ease; }
 }

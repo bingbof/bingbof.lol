@@ -15,31 +15,26 @@
     </div>
   </div>
 
-  <div id="entranceFlash" aria-hidden="true"></div>
-
   <div id="landing" class="screen">
     <button id="enterBtn" class="enter">entrance...</button>
   </div>
 
-  <div id="main" class="screen hidden">
-    <video id="bgVideo" class="bg-video" src="homeloop_video.mp4" autoplay muted loop playsinline></video>
+  <div id="intro" class="screen hidden">
+    <video id="introVideo" class="intro-video" src="actor_intro.mp4" playsinline></video>
+    <button id="skipBtn" class="skip-btn" type="button">skip...</button>
+  </div>
 
+  <div id="home" class="screen hidden">
+    <video id="bgVideo" class="bg-video" src="actor_home.mp4" autoplay muted loop playsinline></video>
     <pre class="welcome">bingbof.lol</pre>
-
     <button id="clickMeBtn" class="click-me hidden-initial" type="button">
-      click me <span class="arrow arrow-down" aria-hidden="true">&#x25BC;</span>
+      click me
     </button>
   </div>
 
-  <div id="menuScreen" data-view="main">
-    <div class="space-bg" aria-hidden="true">
-      <div class="stars stars-small"></div>
-      <div class="stars stars-medium"></div>
-      <div class="stars stars-large"></div>
-    </div>
-
+  <div id="menuOverlay" class="menu-overlay" data-view="main" aria-hidden="true">
     <button id="backBtn" class="nav-btn nav-btn-top" type="button">
-      back <span class="arrow arrow-up" aria-hidden="true">&#x25B2;</span>
+      back
     </button>
 
     <button id="viewBackBtn" class="nav-btn nav-btn-top" type="button">
@@ -54,8 +49,8 @@
     <div class="view-stage">
       <div class="menu-view view-main">
         <div class="menu-buttons">
-          <button class="menu-btn" type="button" data-view="socials">socials</button>
-          <button class="menu-btn" type="button" data-view="friends">friends</button>
+          <button class="menu-btn" type="button" data-view="socials">socials...</button>
+          <button class="menu-btn" type="button" data-view="friends">friends...</button>
         </div>
       </div>
 
@@ -129,46 +124,6 @@
     <button id="infoBtn" class="icon-btn corner-btn info-btn" type="button" aria-label="About this site">
       <span class="info-glyph" aria-hidden="true">i</span>
     </button>
-
-    <div class="audio-bar">
-      <div class="audio-progress">
-        <span id="audioCurrent" class="audio-time audio-time-current">0:00</span>
-        <input id="audioScrubber" class="audio-scrubber" type="range" min="0" max="1000" value="0" step="1" aria-label="Seek song">
-        <span id="audioTotal" class="audio-time audio-time-total">0:00</span>
-      </div>
-      <div class="audio-controls">
-        <canvas id="vizCanvas" class="viz-canvas" width="80" height="22" aria-hidden="true"></canvas>
-        <div class="now-playing">
-          <div class="np-label">now playing</div>
-          <div class="np-title">a letter to hollis</div>
-          <div class="np-artist">2hollis</div>
-        </div>
-        <button id="playPauseBtn" class="icon-btn play-pause-btn" type="button" aria-label="Pause">
-          <svg class="pp-icon pp-icon-pause" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
-            <rect x="6" y="5" width="4" height="14" rx="1"></rect>
-            <rect x="14" y="5" width="4" height="14" rx="1"></rect>
-          </svg>
-          <svg class="pp-icon pp-icon-play" viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true">
-            <polygon points="7 5 19 12 7 19"></polygon>
-          </svg>
-        </button>
-        <div class="volume-control">
-          <input id="volumeSlider" class="volume-slider" type="range" min="0" max="100" value="100" aria-label="Volume">
-          <button id="muteBtn" class="icon-btn mute-btn" type="button" aria-label="Toggle audio">
-            <svg class="mute-icon mute-icon-on" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
-            </svg>
-            <svg class="mute-icon mute-icon-off" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <line x1="23" y1="9" x2="17" y2="15"></line>
-              <line x1="17" y1="9" x2="23" y2="15"></line>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 
   <video id="secretVideo" class="secret hidden" src="secret.mp4" playsinline></video>
@@ -181,9 +136,10 @@
         <h3 class="info-heading">keyboard shortcuts</h3>
         <ul class="info-list">
           <li><kbd>enter</kbd> / <kbd>space</kbd> &mdash; continue past the entrance</li>
-          <li><kbd>esc</kbd> &mdash; close this overlay</li>
+          <li><kbd>esc</kbd> &mdash; back out / close overlays</li>
         </ul>
       </section>
+      <button id="watchIntroBtn" class="info-action-btn" type="button">watch intro again</button>
       <p class="info-credit">
         made with &lt;3 by bingy
         <br>
@@ -192,13 +148,8 @@
     </div>
   </div>
 
-  <audio id="entranceAudio" src="startloop.mp3" loop preload="auto"></audio>
-  <audio id="homeAudio" src="homeloop_audio.mp3" loop preload="auto"></audio>
-  <audio id="menuAudio" src="menuloop_audio.mp3" loop preload="metadata"></audio>
-  <audio id="tapAudio" src="tap.mp3" preload="auto"></audio>
-  <audio id="crashAudio" src="crash.mp3" preload="auto"></audio>
+  <audio id="homeAudio" src="actor_home.mp3" loop preload="auto"></audio>
 
-  <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
