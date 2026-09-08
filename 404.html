@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bingbof — not found</title>
+  <meta name="description" content="404 — nothing here" />
+
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+  <meta name="theme-color" content="#000000" />
+
+  <link rel="stylesheet" href="/styles.css" />
+  <style>
+    #notfound {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      text-align: center;
+      padding: 2rem;
+      box-sizing: border-box;
+    }
+
+    .nf-code {
+      margin: 0;
+      font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+      font-size: clamp(6rem, 22vw, 16rem);
+      line-height: 1;
+      letter-spacing: 0.05em;
+      color: #fff;
+      mix-blend-mode: difference;
+      animation: welcome-spin 3s linear infinite;
+      will-change: transform;
+    }
+
+    .nf-message {
+      margin: 0;
+      font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+      font-size: 1rem;
+      letter-spacing: 0.15em;
+      text-transform: lowercase;
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .nf-home {
+      font-size: 1.05rem;
+      padding: 0.6rem 1.4rem;
+      margin-top: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="notfound">
+    <pre class="nf-code">404</pre>
+    <p class="nf-message">nothing here</p>
+    <a class="enter nf-home" href="/">back home</a>
+  </div>
+</body>
+</html>

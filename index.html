@@ -4,6 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>bingbof</title>
+  <meta name="description" content="bingbof.lol — personal site" />
+
+  <link rel="icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="bingbof.lol" />
+  <meta property="og:title" content="bingbof" />
+  <meta property="og:description" content="bingbof.lol" />
+  <meta property="og:url" content="https://bingbof.lol" />
+  <meta property="og:image" content="https://bingbof.lol/favicon.ico" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="bingbof" />
+  <meta name="twitter:description" content="bingbof.lol" />
+  <meta name="twitter:image" content="https://bingbof.lol/favicon.ico" />
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -19,13 +36,7 @@
     <button id="enterBtn" class="enter">entrance...</button>
   </div>
 
-  <div id="intro" class="screen hidden">
-    <video id="introVideo" class="intro-video" src="actor_intro.mp4" playsinline></video>
-    <button id="skipBtn" class="skip-btn" type="button">skip...</button>
-  </div>
-
   <div id="home" class="screen hidden">
-    <video id="bgVideo" class="bg-video" src="actor_home.mp4" autoplay muted loop playsinline></video>
     <pre class="welcome">bingbof.lol</pre>
     <button id="clickMeBtn" class="click-me hidden-initial" type="button">
       click me
@@ -33,9 +44,7 @@
   </div>
 
   <div id="menuOverlay" class="menu-overlay" data-view="main" aria-hidden="true">
-    <button id="backBtn" class="nav-btn nav-btn-top" type="button">
-      back
-    </button>
+    <button id="backBtn" class="nav-btn nav-btn-top" type="button">back</button>
 
     <button id="viewBackBtn" class="nav-btn nav-btn-top" type="button">
       <span class="arrow arrow-left" aria-hidden="true">&#x25C0;</span> back
@@ -120,36 +129,56 @@
         </ul>
       </div>
     </div>
-
-    <button id="infoBtn" class="icon-btn corner-btn info-btn" type="button" aria-label="About this site">
-      <span class="info-glyph" aria-hidden="true">i</span>
-    </button>
   </div>
 
-  <video id="secretVideo" class="secret hidden" src="secret.mp4" playsinline></video>
+  <div id="chatOverlay" class="chat-overlay" data-view="username" aria-hidden="true">
+    <button id="chatCloseBtn" class="nav-btn chat-close-btn" type="button">back</button>
 
-  <div id="infoOverlay" class="info-overlay" aria-hidden="true">
-    <div class="info-card" role="dialog" aria-modal="true" aria-labelledby="infoTitle">
-      <button id="infoCloseBtn" class="info-close" type="button" aria-label="Close">&times;</button>
-      <h2 id="infoTitle" class="info-title">about</h2>
-      <section class="info-section">
-        <h3 class="info-heading">keyboard shortcuts</h3>
-        <ul class="info-list">
-          <li><kbd>enter</kbd> / <kbd>space</kbd> &mdash; continue past the entrance</li>
-          <li><kbd>esc</kbd> &mdash; back out / close overlays</li>
-        </ul>
-      </section>
-      <button id="watchIntroBtn" class="info-action-btn" type="button">watch intro again</button>
-      <p class="info-credit">
-        made with &lt;3 by bingy
-        <br>
-        thanks to <a class="info-link" href="https://accidentalwatermelon.org" target="_blank" rel="noopener noreferrer">the accidental watermelon</a>
-      </p>
+    <div class="chat-stage">
+      <div class="chat-view chat-view-username">
+        <h2 class="chat-title">what's your name?</h2>
+        <form id="usernameForm" class="chat-form">
+          <input id="usernameInput" class="chat-input" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="username" required />
+          <button type="submit" class="chat-btn">continue</button>
+        </form>
+      </div>
+
+      <div class="chat-view chat-view-picker">
+        <h2 class="chat-title">pick a chat</h2>
+        <div class="chat-picker-buttons">
+          <button class="chat-btn chat-picker-btn" type="button" data-room="chat1">chat 1</button>
+          <button class="chat-btn chat-picker-btn" type="button" data-room="chat2">chat 2</button>
+        </div>
+      </div>
+
+      <div class="chat-view chat-view-password">
+        <h2 class="chat-title">enter password</h2>
+        <form id="passwordForm" class="chat-form">
+          <input id="passwordInput" class="chat-input" type="password" autocomplete="off" placeholder="password" required />
+          <button type="submit" class="chat-btn">enter</button>
+        </form>
+        <div id="passwordError" class="chat-error hidden">wrong password</div>
+        <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
+      </div>
+
+      <div class="chat-view chat-view-room">
+        <div class="chat-room-header">
+          <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
+          <div id="chatRoomTitle" class="chat-room-title">chat 1</div>
+        </div>
+        <div id="chatPresence" class="chat-presence" aria-live="polite">online: —</div>
+        <ul id="chatMessages" class="chat-messages"></ul>
+        <div id="chatRateWarn" class="chat-rate-warn hidden">slow down...</div>
+        <form id="chatMessageForm" class="chat-message-form">
+          <input id="chatMessageInput" class="chat-message-input" type="text" maxlength="500" autocomplete="off" placeholder="type a message..." required />
+          <button type="submit" class="chat-btn chat-send-btn">send</button>
+        </form>
+      </div>
     </div>
   </div>
 
-  <audio id="homeAudio" src="actor_home.mp3" loop preload="auto"></audio>
-
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
