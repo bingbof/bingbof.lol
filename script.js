@@ -158,325 +158,31 @@ if (mobileDismissBtn) {
 }
 
 // ============================================================
-// CHAT SYSTEM
+// CHAT — lives at /chat/. typing "chat" opens it in a blank-tab
+// shell (url bar stays about:blank) with the real app in an iframe.
 // ============================================================
-// PASTE YOUR FIREBASE CONFIG BELOW (from Firebase console → Project settings → Your apps → </>)
-const firebaseConfig = {
-  apiKey: "AIzaSyC-r6E_TvldCSN-ZHiBeJEui910x4OV9fQ",
-  authDomain: "bingbof-chat.firebaseapp.com",
-  databaseURL: "https://bingbof-chat-default-rtdb.firebaseio.com",
-  projectId: "bingbof-chat",
-  storageBucket: "bingbof-chat.firebasestorage.app",
-  messagingSenderId: "621923304119",
-  appId: "1:621923304119:web:ccf313854a226716268332",
-  measurementId: "G-CKPKVWBYN5",
-};
-
-const CHAT_PASSWORD = 'nenebutt';
-
-const chatOverlay      = document.getElementById('chatOverlay');
-const chatCloseBtn     = document.getElementById('chatCloseBtn');
-const usernameForm     = document.getElementById('usernameForm');
-const usernameInput    = document.getElementById('usernameInput');
-const passwordForm     = document.getElementById('passwordForm');
-const passwordInput    = document.getElementById('passwordInput');
-const passwordError    = document.getElementById('passwordError');
-const chatRoomTitle    = document.getElementById('chatRoomTitle');
-const chatPresenceEl   = document.getElementById('chatPresence');
-const chatMessagesEl   = document.getElementById('chatMessages');
-const chatRateWarnEl   = document.getElementById('chatRateWarn');
-const chatMessageForm  = document.getElementById('chatMessageForm');
-const chatMessageInput = document.getElementById('chatMessageInput');
-
-let chatOpen         = false;
-let chatUsername     = null;
-let currentRoom      = null;   // 'chat1' | 'chat2' | null
-let chatMessagesRef  = null;
-let chatOnValueCb    = null;
-let presenceListRef  = null;
-let presenceListCb   = null;
-let mySessionRef     = null;
-
-// per-browser-tab unique id for presence tracking
-const chatSessionId = (crypto && crypto.randomUUID)
-  ? crypto.randomUUID()
-  : ('s' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
-
-// rate limiter
-const RATE_MIN_INTERVAL_MS = 500;
-const RATE_WINDOW_MS       = 10000;
-const RATE_MAX_IN_WINDOW   = 6;
-let sendTimestamps = [];
-let lastSendAt     = 0;
-let rateWarnTimer  = null;
-
-let firebaseDb = null;
-try {
-  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'REPLACE_ME') {
-    firebase.initializeApp(firebaseConfig);
-    firebaseDb = firebase.database();
-  }
-} catch (e) {
-  console.warn('firebase init failed', e);
-}
-
-function setChatView(view) {
-  chatOverlay.dataset.view = view;
-}
-
-function openChat() {
-  if (chatOpen) return;
-  chatOpen = true;
-  chatOverlay.classList.add('show');
-  chatOverlay.setAttribute('aria-hidden', 'false');
-  if (chatUsername) {
-    setChatView('picker');
-  } else {
-    setChatView('username');
-    setTimeout(() => usernameInput.focus(), 50);
-  }
-}
-
-function closeChat() {
-  if (!chatOpen) return;
-  chatOpen = false;
-  chatOverlay.classList.remove('show');
-  chatOverlay.setAttribute('aria-hidden', 'true');
-  leaveRoom();
-}
-
-chatCloseBtn.addEventListener('click', closeChat);
-
-usernameForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const name = usernameInput.value.trim();
-  if (!name) return;
-  chatUsername = name;
-  setChatView('picker');
-});
-
-document.querySelectorAll('.chat-picker-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const room = btn.dataset.room;
-    if (room === 'chat1') {
-      enterRoom('chat1', 'chat 1');
-    } else if (room === 'chat2') {
-      passwordInput.value = '';
-      passwordError.classList.add('hidden');
-      setChatView('password');
-      setTimeout(() => passwordInput.focus(), 50);
-    }
-  });
-});
-
-passwordForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  if (passwordInput.value === CHAT_PASSWORD) {
-    passwordError.classList.add('hidden');
-    enterRoom('chat2', 'chat 2');
-  } else {
-    passwordError.classList.remove('hidden');
-    passwordInput.value = '';
-    passwordInput.focus();
-  }
-});
-
-document.querySelectorAll('.chat-back-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.target;
-    if (target === 'picker') {
-      leaveRoom();
-      setChatView('picker');
-    }
-  });
-});
-
-function enterRoom(roomId, label) {
-  currentRoom = roomId;
-  chatRoomTitle.textContent = label;
-  chatMessagesEl.innerHTML = '';
-  chatPresenceEl.textContent = 'online: —';
-  hideRateWarn();
-  sendTimestamps = [];
-  setChatView('room');
-  setTimeout(() => chatMessageInput.focus(), 50);
-
-  if (!firebaseDb) {
-    renderSystemMessage('(firebase not configured — messages will not send)');
-    return;
-  }
-
-  chatMessagesRef = firebaseDb.ref('chats/' + roomId + '/messages').limitToLast(200);
-  chatOnValueCb = chatMessagesRef.on('value', (snap) => {
-    chatMessagesEl.innerHTML = '';
-    snap.forEach(child => {
-      const msg = child.val();
-      renderMessage(msg.user, msg.text, msg.ts);
-    });
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-  });
-
-  joinPresence(roomId);
-}
-
-function leaveRoom() {
-  if (chatMessagesRef && chatOnValueCb) {
-    try { chatMessagesRef.off('value', chatOnValueCb); } catch (e) {}
-  }
-  chatMessagesRef = null;
-  chatOnValueCb   = null;
-
-  leavePresence();
-  currentRoom = null;
-}
-
-function joinPresence(roomId) {
-  if (!firebaseDb || !chatUsername) return;
-
-  mySessionRef = firebaseDb.ref('chats/' + roomId + '/presence/' + chatSessionId);
+function openChatWindow() {
+  const url = window.location.origin + '/chat/';
+  const w = window.open('about:blank', '_blank');
+  if (!w) { window.location.href = url; return; }   // popup blocked — just go there
   try {
-    mySessionRef.onDisconnect().remove();
-    mySessionRef.set({
-      user: chatUsername,
-      ts: firebase.database.ServerValue.TIMESTAMP,
-    });
-  } catch (e) { /* ignore */ }
-
-  presenceListRef = firebaseDb.ref('chats/' + roomId + '/presence');
-  presenceListCb = presenceListRef.on('value', (snap) => {
-    const users = [];
-    snap.forEach(child => {
-      const v = child.val();
-      if (v && v.user) users.push(v.user);
-    });
-    renderPresence(users);
-  });
-}
-
-function leavePresence() {
-  if (mySessionRef) {
-    try { mySessionRef.onDisconnect().cancel(); } catch (e) {}
-    try { mySessionRef.remove(); } catch (e) {}
+    w.document.write(
+      '<!doctype html><html><head><meta charset="utf-8">' +
+      '<title>bingbof</title>' +
+      '<link rel="icon" href="' + window.location.origin + '/favicon.ico">' +
+      '<style>html,body{margin:0;height:100%;background:#000}' +
+      'iframe{display:block;border:0;width:100%;height:100%}</style>' +
+      '</head><body><iframe src="' + url + '" allow="clipboard-write"></iframe></body></html>'
+    );
+    w.document.close();
+  } catch (e) {
+    w.location.href = url;
   }
-  if (presenceListRef && presenceListCb) {
-    try { presenceListRef.off('value', presenceListCb); } catch (e) {}
-  }
-  mySessionRef    = null;
-  presenceListRef = null;
-  presenceListCb  = null;
 }
 
-function renderPresence(users) {
-  if (!users.length) {
-    chatPresenceEl.textContent = 'online: nobody';
-    return;
-  }
-  // dedupe usernames (a person open in two tabs still counts once visually)
-  const seen = new Set();
-  const unique = users.filter(u => {
-    if (seen.has(u)) return false;
-    seen.add(u);
-    return true;
-  });
-  chatPresenceEl.innerHTML = '';
-  const label = document.createTextNode('online: ');
-  chatPresenceEl.appendChild(label);
-  unique.forEach((u, i) => {
-    const s = document.createElement('span');
-    s.className = 'presence-user';
-    s.textContent = u;
-    chatPresenceEl.appendChild(s);
-    if (i < unique.length - 1) chatPresenceEl.appendChild(document.createTextNode(', '));
-  });
-}
-
-function formatTime(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  return d.toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit', hour12: true,
-  });
-}
-
-function renderMessage(user, text, ts) {
-  const li = document.createElement('li');
-  li.className = 'chat-message';
-  if (ts) {
-    const t = document.createElement('span');
-    t.className = 'chat-message-time';
-    t.textContent = formatTime(ts);
-    li.appendChild(t);
-  }
-
-  if (text && text.startsWith('/me ')) {
-    li.classList.add('chat-message-action');
-    const body = document.createElement('span');
-    body.textContent = '* ' + user + ' ' + text.slice(4);
-    li.appendChild(body);
-  } else {
-    const u = document.createElement('span');
-    u.className = 'chat-message-user';
-    u.textContent = user + ':';
-    const txt = document.createElement('span');
-    txt.textContent = ' ' + text;
-    li.appendChild(u);
-    li.appendChild(txt);
-  }
-
-  chatMessagesEl.appendChild(li);
-}
-
-function showRateWarn(msg) {
-  chatRateWarnEl.textContent = msg;
-  chatRateWarnEl.classList.remove('hidden');
-  if (rateWarnTimer) clearTimeout(rateWarnTimer);
-  rateWarnTimer = setTimeout(hideRateWarn, 1800);
-}
-
-function hideRateWarn() {
-  chatRateWarnEl.classList.add('hidden');
-  if (rateWarnTimer) { clearTimeout(rateWarnTimer); rateWarnTimer = null; }
-}
-
-function renderSystemMessage(text) {
-  const li = document.createElement('li');
-  li.className = 'chat-message';
-  li.style.opacity = '0.5';
-  li.textContent = text;
-  chatMessagesEl.appendChild(li);
-}
-
-chatMessageForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const text = chatMessageInput.value.trim();
-  if (!text || !currentRoom || !firebaseDb || !chatUsername) return;
-
-  const now = Date.now();
-  if (now - lastSendAt < RATE_MIN_INTERVAL_MS) {
-    showRateWarn('slow down...');
-    return;
-  }
-  sendTimestamps = sendTimestamps.filter(t => now - t < RATE_WINDOW_MS);
-  if (sendTimestamps.length >= RATE_MAX_IN_WINDOW) {
-    const waitMs = RATE_WINDOW_MS - (now - sendTimestamps[0]);
-    const secs = Math.max(1, Math.ceil(waitMs / 1000));
-    showRateWarn('slow down... wait ' + secs + 's');
-    return;
-  }
-
-  lastSendAt = now;
-  sendTimestamps.push(now);
-  hideRateWarn();
-
-  firebaseDb.ref('chats/' + currentRoom + '/messages').push({
-    user: chatUsername,
-    text: text,
-    ts: firebase.database.ServerValue.TIMESTAMP,
-  }).catch(err => console.warn('send failed', err));
-  chatMessageInput.value = '';
-});
-
-// keystroke buffer — typing "chat" anywhere (outside inputs) opens the chat
+// ============================================================
+// KEYWORD TRIGGERS + GLOBAL KEYDOWN
+// ============================================================
 let keyBuf = '';
 function isTypingInField() {
   const el = document.activeElement;
@@ -485,22 +191,17 @@ function isTypingInField() {
   return tag === 'INPUT' || tag === 'TEXTAREA' || el.isContentEditable;
 }
 
-
-// ============================================================
-// GLOBAL KEYDOWN
-// ============================================================
 window.addEventListener('keydown', (event) => {
   const key = event.key.toLowerCase();
 
   if (event.key === 'Escape') {
-    if (chatOpen) { closeChat(); return; }
     if (currentScreen === 'menu') { closeMenu(); return; }
   }
 
-  // keyword triggers — only when NOT typing in a field, no overlay open
-  if (!chatOpen && !isTypingInField() && /^[a-z0-9]$/.test(key)) {
+  // keyword triggers — only when NOT typing in a field
+  if (!isTypingInField() && /^[a-z0-9]$/.test(key)) {
     keyBuf = (keyBuf + key).slice(-6);
-    if (keyBuf.endsWith('chat')) { keyBuf = ''; openChat(); return; }
+    if (keyBuf.endsWith('chat')) { keyBuf = ''; openChatWindow(); return; }
     if (keyBuf.endsWith('404'))  { keyBuf = ''; window.location.href = '/404.html'; return; }
     if (keyBuf.endsWith('spin')) {
       keyBuf = '';

@@ -1,0 +1,94 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $uid && !data.exists()",
+        ".validate": "newData.hasChildren(['username','createdAt'])",
+        "username": {
+          ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && newData.val() <= now && newData.val() > (now - 300000)"
+        },
+        "lastRead": {
+          "$roomId": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= (now + 60000)"
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+
+    "chats": {
+      "$roomId": {
+        ".read": "auth != null && ($roomId == 'chat1' || $roomId == 'chat2' || $roomId == 'chat3')",
+
+        "messages": {
+          "$msgId": {
+            ".write": "auth != null && !data.exists() && newData.exists()",
+            ".validate": "newData.hasChildren(['uid','user','text','ts']) && newData.child('uid').val() == auth.uid && newData.child('user').val() == root.child('users').child(auth.uid).child('username').val()",
+            "uid": {
+              ".validate": "newData.isString()"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/)"
+            },
+            "text": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500"
+            },
+            "ts": {
+              ".validate": "newData.isNumber() && newData.val() <= now && newData.val() > (now - 300000)"
+            },
+            "replyTo": {
+              ".validate": "newData.hasChildren(['id','user','text'])",
+              "id":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64" },
+              "user": { ".validate": "newData.isString() && newData.val().length <= 40" },
+              "text": { ".validate": "newData.isString() && newData.val().length <= 200" },
+              "$other": { ".validate": false }
+            },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "presence": {
+          "$sessionId": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['uid','user','ts']) && newData.child('uid').val() == auth.uid && newData.child('user').val() == root.child('users').child(auth.uid).child('username').val()",
+            "uid": {
+              ".validate": "newData.isString()"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/)"
+            },
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": { ".validate": false }
+          }
+        },
+
+        "typing": {
+          "$sessionId": {
+            ".write": "auth != null",
+            ".validate": "newData.hasChildren(['uid','user','ts']) && newData.child('uid').val() == auth.uid && newData.child('user').val() == root.child('users').child(auth.uid).child('username').val()",
+            "uid": {
+              ".validate": "newData.isString()"
+            },
+            "user": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/)"
+            },
+            "ts": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": { ".validate": false }
+          }
+        }
+      }
+    }
+  }
+}

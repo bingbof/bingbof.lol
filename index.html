@@ -33,7 +33,7 @@
   </div>
 
   <div id="landing" class="screen">
-    <button id="enterBtn" class="enter">entrance...</button>
+    <button id="enterBtn" class="enter">enter</button>
   </div>
 
   <div id="home" class="screen hidden">
@@ -131,54 +131,6 @@
     </div>
   </div>
 
-  <div id="chatOverlay" class="chat-overlay" data-view="username" aria-hidden="true">
-    <button id="chatCloseBtn" class="nav-btn chat-close-btn" type="button">back</button>
-
-    <div class="chat-stage">
-      <div class="chat-view chat-view-username">
-        <h2 class="chat-title">what's your name?</h2>
-        <form id="usernameForm" class="chat-form">
-          <input id="usernameInput" class="chat-input" type="text" maxlength="20" autocomplete="off" spellcheck="false" placeholder="username" required />
-          <button type="submit" class="chat-btn">continue</button>
-        </form>
-      </div>
-
-      <div class="chat-view chat-view-picker">
-        <h2 class="chat-title">pick a chat</h2>
-        <div class="chat-picker-buttons">
-          <button class="chat-btn chat-picker-btn" type="button" data-room="chat1">chat 1</button>
-          <button class="chat-btn chat-picker-btn" type="button" data-room="chat2">chat 2</button>
-        </div>
-      </div>
-
-      <div class="chat-view chat-view-password">
-        <h2 class="chat-title">enter password</h2>
-        <form id="passwordForm" class="chat-form">
-          <input id="passwordInput" class="chat-input" type="password" autocomplete="off" placeholder="password" required />
-          <button type="submit" class="chat-btn">enter</button>
-        </form>
-        <div id="passwordError" class="chat-error hidden">wrong password</div>
-        <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
-      </div>
-
-      <div class="chat-view chat-view-room">
-        <div class="chat-room-header">
-          <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
-          <div id="chatRoomTitle" class="chat-room-title">chat 1</div>
-        </div>
-        <div id="chatPresence" class="chat-presence" aria-live="polite">online: —</div>
-        <ul id="chatMessages" class="chat-messages"></ul>
-        <div id="chatRateWarn" class="chat-rate-warn hidden">slow down...</div>
-        <form id="chatMessageForm" class="chat-message-form">
-          <input id="chatMessageInput" class="chat-message-input" type="text" maxlength="500" autocomplete="off" placeholder="type a message..." required />
-          <button type="submit" class="chat-btn chat-send-btn">send</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

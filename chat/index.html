@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>bingbof</title>
+  <meta name="robots" content="noindex" />
+
+  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
+  <meta name="theme-color" content="#000000" />
+
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="chat-page">
+  <div id="chatOverlay" class="chat-overlay show" data-view="auth">
+    <div class="chat-stage">
+      <div class="chat-view chat-view-auth">
+        <h2 id="authTitle" class="chat-title">log in</h2>
+        <form id="authForm" class="chat-form">
+          <input id="authUsernameInput" class="chat-input" type="text" maxlength="20" autocomplete="username" spellcheck="false" placeholder="username" required />
+          <input id="authPasswordInput" class="chat-input" type="password" autocomplete="current-password" placeholder="password" required />
+          <input id="authConfirmInput" class="chat-input" type="password" autocomplete="new-password" placeholder="confirm password" hidden />
+          <button id="authSubmitBtn" type="submit" class="chat-btn">log in</button>
+        </form>
+        <div id="authError" class="chat-error hidden"></div>
+        <button id="authToggleBtn" class="auth-toggle-btn" type="button">need an account? create one</button>
+      </div>
+
+      <div class="chat-view chat-view-picker">
+        <h2 class="chat-title">pick a chat</h2>
+        <div class="chat-picker-buttons">
+          <button class="chat-btn chat-picker-btn" type="button" data-room="chat1">
+            <span class="chat-picker-name">chat</span>
+            <span class="chat-picker-missed" hidden></span>
+          </button>
+          <button class="chat-btn chat-picker-btn" type="button" data-room="chat2">
+            <span class="chat-picker-name">k-pop finger heart emoji</span>
+            <span class="chat-picker-missed" hidden></span>
+          </button>
+          <button class="chat-btn chat-picker-btn" type="button" data-room="chat3">
+            <span class="chat-picker-name">Mung Bao Discussion.</span>
+            <span class="chat-picker-missed" hidden></span>
+          </button>
+        </div>
+        <div class="chat-whoami">
+          <span>logged in as <span id="chatWhoami" class="presence-user">&mdash;</span></span>
+          <button id="logoutBtn" class="auth-toggle-btn" type="button">log out</button>
+        </div>
+      </div>
+
+      <div class="chat-view chat-view-password">
+        <h2 class="chat-title">enter password</h2>
+        <form id="passwordForm" class="chat-form">
+          <input id="passwordInput" class="chat-input" type="password" autocomplete="off" placeholder="password" required />
+          <button type="submit" class="chat-btn">enter</button>
+        </form>
+        <div id="passwordError" class="chat-error hidden">wrong password</div>
+        <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
+      </div>
+
+      <div class="chat-view chat-view-room">
+        <div class="chat-room-header">
+          <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
+          <div id="chatRoomTitle" class="chat-room-title">chat</div>
+        </div>
+        <div id="chatPresence" class="chat-presence" aria-live="polite">online: —</div>
+        <ul id="chatMessages" class="chat-messages"></ul>
+        <div id="chatTyping" class="chat-typing" aria-live="polite"></div>
+        <div id="chatReplyBar" class="chat-reply-bar hidden">
+          <span class="chat-reply-bar-text">replying to <span id="chatReplyBarWho" class="presence-user"></span> <span id="chatReplyBarPreview"></span></span>
+          <button id="chatReplyCancel" class="chat-reply-cancel" type="button" aria-label="cancel reply">&times;</button>
+        </div>
+        <div id="chatRateWarn" class="chat-rate-warn hidden">slow down...</div>
+        <form id="chatMessageForm" class="chat-message-form">
+          <input id="chatMessageInput" class="chat-message-input" type="text" maxlength="500" autocomplete="off" placeholder="type a message..." required />
+          <button type="submit" class="chat-btn chat-send-btn">send</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <button id="backToSiteBtn" class="chat-back-to-site" type="button">back to bingbof.lol</button>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+  <script src="chat.js"></script>
+</body>
+</html>
