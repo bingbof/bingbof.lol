@@ -65,6 +65,7 @@ function closeMenu() {
   menuOverlay.classList.remove('show');
   menuOverlay.setAttribute('aria-hidden', 'true');
   home.classList.remove('menu-open');
+  stopDateTime();
 }
 
 function showMenuView(name) {
@@ -103,6 +104,10 @@ function startDateTime() {
   updateDateTime();
   if (dateTimeTick) return;
   dateTimeTick = setInterval(updateDateTime, 1000);
+}
+
+function stopDateTime() {
+  if (dateTimeTick) { clearInterval(dateTimeTick); dateTimeTick = null; }
 }
 
 // ============================================================
@@ -172,7 +177,7 @@ function openChatWindow() {
       '<link rel="icon" href="' + window.location.origin + '/favicon.ico">' +
       '<style>html,body{margin:0;height:100%;background:#000}' +
       'iframe{display:block;border:0;width:100%;height:100%}</style>' +
-      '</head><body><iframe src="' + url + '" allow="clipboard-write"></iframe></body></html>'
+      '</head><body><iframe src="' + url + '"></iframe></body></html>'
     );
     w.document.close();
   } catch (e) {

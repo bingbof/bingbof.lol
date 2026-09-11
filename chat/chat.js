@@ -14,14 +14,72 @@ const firebaseConfig = {
   measurementId: "G-CKPKVWBYN5",
 };
 
-// room id (database key) -> display label + optional soft-gate password.
-// the password only hides the room in the UI; see database.rules.json for
-// what's actually enforced server-side.
+// room id (database key) -> display label + whether it's end-to-end encrypted.
+// encrypted rooms prompt for a password, derive an AES-GCM key from it
+// (PBKDF2), and only ever send/store ciphertext — the password itself never
+// appears in this file or reaches the server.
 const CHAT_ROOMS = {
-  chat1: { label: 'chat',                     password: null },
-  chat2: { label: 'k-pop finger heart emoji', password: 'nenebutt' },
-  chat3: { label: 'Mung Bao Discussion.',     password: 'Behji' },
+  chat1: { label: 'chat',                     encrypted: false },
+  chat2: { label: 'k-pop finger heart emoji', encrypted: true  },
+  chat3: { label: 'Mung Bao Discussion.',     encrypted: true  },
 };
+
+const KDF_ITERATIONS = 200000;
+
+let roomKey        = null;    // CryptoKey for the current encrypted room, or null
+let roomKeyChecked = false;   // have we verified the key against existing messages?
+let decryptedCache = new Map();   // messageKey -> { text, replyText }, reset per room
+
+function b64(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+  return btoa(s);
+}
+function ub64(str) {
+  const s = atob(str);
+  const out = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+  return out;
+}
+
+async function deriveRoomKey(roomId, password) {
+  const enc = new TextEncoder();
+  const base = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode('bingbof:v1:' + roomId), iterations: KDF_ITERATIONS, hash: 'SHA-256' },
+    base,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptText(key, plaintext) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key,
+    new TextEncoder().encode(plaintext));
+  return 'v1:' + b64(iv) + ':' + b64(new Uint8Array(ct));
+}
+
+async function decryptText(key, blob) {
+  const parts = blob.split(':');            // v1 : ivB64 : ctB64
+  const pt = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: ub64(parts[1]) }, key, ub64(parts[2]));
+  return new TextDecoder().decode(pt);
+}
+
+// decrypt if it looks encrypted; pass plain text through; mark failures
+async function safeDecrypt(key, blob, stats) {
+  if (typeof blob !== 'string' || blob.indexOf('v1:') !== 0) return blob;
+  try {
+    const t = await decryptText(key, blob);
+    if (stats) stats.ok++;
+    return t;
+  } catch (e) {
+    if (stats) stats.fail++;
+    return '🔒 locked';
+  }
+}
 
 const chatOverlay       = document.getElementById('chatOverlay');
 const backToSiteBtn     = document.getElementById('backToSiteBtn');
@@ -316,32 +374,52 @@ document.querySelectorAll('.chat-picker-btn').forEach(btn => {
     const room = btn.dataset.room;
     const cfg  = CHAT_ROOMS[room];
     if (!cfg) return;
-    if (!cfg.password) {
-      enterRoom(room, cfg.label);
+    if (!cfg.encrypted) {
+      enterRoom(room, cfg.label, null);
       return;
     }
     pendingRoom = room;
     passwordInput.value = '';
+    passwordError.textContent = 'wrong password';
     passwordError.classList.add('hidden');
     setChatView('password');
     setTimeout(() => passwordInput.focus(), 50);
   });
 });
 
-passwordForm.addEventListener('submit', (e) => {
+passwordForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const cfg = CHAT_ROOMS[pendingRoom];
-  if (cfg && passwordInput.value === cfg.password) {
+  const roomId = pendingRoom;
+  const cfg = CHAT_ROOMS[roomId];
+  const pw = passwordInput.value;
+  if (!cfg || !pw) return;
+
+  const submitBtn = passwordForm.querySelector('button[type="submit"]');
+  if (submitBtn) submitBtn.disabled = true;
+  try {
+    const key = await deriveRoomKey(roomId, pw);
     passwordError.classList.add('hidden');
-    const room = pendingRoom;
     pendingRoom = null;
-    enterRoom(room, cfg.label);
-  } else {
+    enterRoom(roomId, cfg.label, key);
+  } catch (err) {
+    console.warn('key derivation failed', err);
+    passwordError.textContent = 'could not unlock — try again';
     passwordError.classList.remove('hidden');
-    passwordInput.value = '';
-    passwordInput.focus();
+  } finally {
+    if (submitBtn) submitBtn.disabled = false;
   }
 });
+
+// bounced here when every existing message failed to decrypt (wrong password)
+function rejectRoomKey(roomId) {
+  leaveRoom();
+  pendingRoom = roomId;
+  setChatView('password');
+  passwordError.textContent = 'wrong password';
+  passwordError.classList.remove('hidden');
+  passwordInput.value = '';
+  setTimeout(() => passwordInput.focus(), 50);
+}
 
 document.querySelectorAll('.chat-back-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -354,8 +432,9 @@ document.querySelectorAll('.chat-back-btn').forEach(btn => {
   });
 });
 
-function enterRoom(roomId, label) {
+function enterRoom(roomId, label, key) {
   currentRoom = roomId;
+  roomKey     = key || null;
   chatRoomTitle.textContent = label;
   chatMessagesEl.innerHTML = '';
   chatPresenceEl.textContent = 'online: —';
@@ -379,34 +458,79 @@ function enterRoom(roomId, label) {
 
 function attachRoom(roomId) {
   titlePrimed    = false;
+  roomKeyChecked = false;
   lastSeenMsgKey = null;
   latestMsgKey   = null;
+  decryptedCache = new Map();
 
   chatMessagesRef = firebaseDb.ref('chats/' + roomId + '/messages').limitToLast(200);
-  chatOnValueCb = chatMessagesRef.on('value', (snap) => {
-    chatMessagesEl.innerHTML = '';
-    let newestKey = null;
-    let newestMsg = null;
-    let prevUid = null;        // sender of the previous rendered message
-    let prevAction = false;    // was the previous message a /me action?
-    snap.forEach(child => {
-      const msg = child.val();
-      const isAction = !!(msg.text && msg.text.startsWith('/me '));
-      // group real messages from the same account, back to back — but a
-      // reply always starts its own group so its reference reads cleanly
-      const grouped = !isAction && !prevAction && !msg.replyTo &&
-                      !!msg.uid && msg.uid === prevUid;
-      renderMessage(child.key, msg, grouped);
-      prevUid    = isAction ? null : (msg.uid || null);
-      prevAction = isAction;
-      newestKey = child.key;
-      newestMsg = msg;
-    });
-    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
-    updateUnreadTitle(newestKey, newestMsg);
-    // this room is open and on screen — keep it marked fully read so
-    // messages arriving now never count as "missed" later
-    markRoomRead(roomId, (newestMsg && typeof newestMsg.ts === 'number') ? newestMsg.ts : Date.now());
+  chatOnValueCb = chatMessagesRef.on('value', async (snap) => {
+    try {
+      const raw = [];
+      snap.forEach(child => {
+        const val = child.val();
+        if (val) raw.push({ key: child.key, msg: val });   // skip null/incomplete entries defensively
+      });
+
+      // decrypt (encrypted rooms only) before rendering — in parallel, and
+      // skip anything we've already decrypted in a previous snapshot, so a
+      // single new message doesn't mean re-decrypting the whole room again
+      const stats = { ok: 0, fail: 0 };
+      const items = await Promise.all(raw.map(async (r) => {
+        const m = r.msg;
+        let text = m.text;
+        let replyText = m.replyTo && m.replyTo.text;
+        if (roomKey) {
+          const cached = decryptedCache.get(r.key);
+          if (cached) {
+            text = cached.text;
+            replyText = cached.replyText;
+          } else {
+            text = await safeDecrypt(roomKey, m.text, stats);
+            if (m.replyTo && m.replyTo.text) replyText = await safeDecrypt(roomKey, m.replyTo.text, null);
+            decryptedCache.set(r.key, { text: text, replyText: replyText });
+          }
+        }
+        return {
+          key: r.key,
+          view: {
+            uid: m.uid, user: m.user, ts: m.ts, text: text,
+            replyTo: m.replyTo ? { id: m.replyTo.id, user: m.replyTo.user, text: replyText } : undefined,
+          },
+        };
+      }));
+
+      // a room this listener no longer owns (user navigated away mid-decrypt)
+      if (currentRoom !== roomId) return;
+
+      // wrong password: nothing decrypted, everything failed -> bounce
+      if (roomKey && !roomKeyChecked) {
+        roomKeyChecked = true;
+        if (stats.ok === 0 && stats.fail > 0) { rejectRoomKey(roomId); return; }
+      }
+
+      chatMessagesEl.innerHTML = '';
+      let newestKey = null;
+      let newestMsg = null;
+      let prevUid = null;
+      let prevAction = false;
+      items.forEach(it => {
+        const v = it.view;
+        const isAction = !!(v.text && v.text.startsWith('/me '));
+        const grouped = !isAction && !prevAction && !v.replyTo &&
+                        !!v.uid && v.uid === prevUid;
+        renderMessage(it.key, v, grouped);
+        prevUid    = isAction ? null : (v.uid || null);
+        prevAction = isAction;
+        newestKey = it.key;
+        newestMsg = v;
+      });
+      chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+      updateUnreadTitle(newestKey, newestMsg);
+      markRoomRead(roomId, (newestMsg && typeof newestMsg.ts === 'number') ? newestMsg.ts : Date.now());
+    } catch (err) {
+      console.error('[chat] failed to process message update', err);
+    }
   }, (err) => {
     console.warn('room read denied', err);
     renderSystemMessage('(lost access to this room)');
@@ -641,7 +765,10 @@ function leaveRoom() {
   clearReplyTarget();
   leaveTyping();
   leavePresence();
-  currentRoom = null;
+  currentRoom     = null;
+  roomKey         = null;
+  roomKeyChecked  = false;
+  decryptedCache  = new Map();
 }
 
 function joinPresence(roomId) {
@@ -860,7 +987,7 @@ function renderSystemMessage(text) {
   chatMessagesEl.appendChild(li);
 }
 
-chatMessageForm.addEventListener('submit', (e) => {
+chatMessageForm.addEventListener('submit', async (e) => {
   e.preventDefault();
   const text = chatMessageInput.value.trim();
   if (!text || !currentRoom || !firebaseDb || !firebaseAuthReady || !chatUsername || !chatUid) return;
@@ -878,6 +1005,24 @@ chatMessageForm.addEventListener('submit', (e) => {
     return;
   }
 
+  const room = currentRoom;
+  const key  = roomKey;
+  const reply = replyTarget;
+
+  let textField = text;
+  let replyField = reply ? reply.text : null;
+  if (key) {
+    try {
+      textField = await encryptText(key, text);
+      if (reply) replyField = await encryptText(key, reply.text);
+    } catch (err) {
+      console.warn('encrypt failed', err);
+      return;
+    }
+  }
+  // room changed while we were encrypting — drop it
+  if (currentRoom !== room) return;
+
   lastSendAt = now;
   sendTimestamps.push(now);
   hideRateWarn();
@@ -885,18 +1030,14 @@ chatMessageForm.addEventListener('submit', (e) => {
   const payload = {
     uid: chatUid,
     user: chatUsername,
-    text: text,
+    text: textField,
     ts: firebase.database.ServerValue.TIMESTAMP,
   };
-  if (replyTarget) {
-    payload.replyTo = {
-      id:   replyTarget.id,
-      user: replyTarget.user,
-      text: replyTarget.text,
-    };
+  if (reply) {
+    payload.replyTo = { id: reply.id, user: reply.user, text: replyField };
   }
 
-  firebaseDb.ref('chats/' + currentRoom + '/messages').push(payload)
+  firebaseDb.ref('chats/' + room + '/messages').push(payload)
     .catch(err => console.warn('send failed', err));
   chatMessageInput.value = '';
   clearReplyTarget();

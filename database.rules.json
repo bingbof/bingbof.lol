@@ -39,7 +39,7 @@
               ".validate": "newData.isString() && newData.val().matches(/^[a-z0-9_-]{3,20}$/)"
             },
             "text": {
-              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 500"
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 4000"
             },
             "ts": {
               ".validate": "newData.isNumber() && newData.val() <= now && newData.val() > (now - 300000)"
@@ -48,7 +48,7 @@
               ".validate": "newData.hasChildren(['id','user','text'])",
               "id":   { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 64" },
               "user": { ".validate": "newData.isString() && newData.val().length <= 40" },
-              "text": { ".validate": "newData.isString() && newData.val().length <= 200" },
+              "text": { ".validate": "newData.isString() && newData.val().length <= 4000" },
               "$other": { ".validate": false }
             },
             "$other": { ".validate": false }
