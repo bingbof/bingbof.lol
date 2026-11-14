@@ -6,85 +6,112 @@
   <title>bingbof</title>
   <meta name="robots" content="noindex" />
 
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="/img/orb.png" type="image/png" />
   <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <meta name="theme-color" content="#000000" />
 
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="chat.css" />
 </head>
-<body class="chat-page">
-  <div id="chatOverlay" class="chat-overlay show" data-view="auth">
-    <div class="chat-stage">
-      <div class="chat-view chat-view-auth">
+<body>
+  <!-- same background as the home screen; background.js finds #bgCanvas and,
+       with no #home on this page, never gates itself off -->
+  <canvas id="bgCanvas" class="bg-canvas" aria-hidden="true"></canvas>
+  <div class="bg-scan" aria-hidden="true"></div>
+  <div class="bg-vignette" aria-hidden="true"></div>
+
+  <!-- data-view picks auth vs the shell; data-pane picks what the main
+       column shows once you are in it -->
+  <div id="chatOverlay" class="chat-app" data-view="auth" data-pane="empty">
+
+    <div class="chat-auth">
+      <div class="chat-auth-card">
         <h2 id="authTitle" class="chat-title">log in</h2>
         <form id="authForm" class="chat-form">
           <input id="authUsernameInput" class="chat-input" type="text" maxlength="20" autocomplete="username" spellcheck="false" placeholder="username" required />
           <input id="authPasswordInput" class="chat-input" type="password" autocomplete="current-password" placeholder="password" required />
           <input id="authConfirmInput" class="chat-input" type="password" autocomplete="new-password" placeholder="confirm password" hidden />
-          <button id="authSubmitBtn" type="submit" class="chat-btn">log in</button>
+          <button id="authSubmitBtn" type="submit" class="btn chat-btn">log in</button>
         </form>
         <div id="authError" class="chat-error hidden"></div>
-        <button id="authToggleBtn" class="auth-toggle-btn" type="button">need an account? create one</button>
-      </div>
-
-      <div class="chat-view chat-view-picker">
-        <h2 class="chat-title">pick a chat</h2>
-        <div class="chat-picker-buttons">
-          <button class="chat-btn chat-picker-btn" type="button" data-room="chat1">
-            <span class="chat-picker-name">chat</span>
-            <span class="chat-picker-missed" hidden></span>
-          </button>
-          <button class="chat-btn chat-picker-btn" type="button" data-room="chat2">
-            <span class="chat-picker-name">k-pop finger heart emoji</span>
-            <span class="chat-picker-missed" hidden></span>
-          </button>
-          <button class="chat-btn chat-picker-btn" type="button" data-room="chat3">
-            <span class="chat-picker-name">Mung Bao Discussion.</span>
-            <span class="chat-picker-missed" hidden></span>
-          </button>
-        </div>
-        <div class="chat-whoami">
-          <span>logged in as <span id="chatWhoami" class="presence-user">&mdash;</span></span>
-          <button id="logoutBtn" class="auth-toggle-btn" type="button">log out</button>
-        </div>
-      </div>
-
-      <div class="chat-view chat-view-password">
-        <h2 class="chat-title">enter password</h2>
-        <form id="passwordForm" class="chat-form">
-          <input id="passwordInput" class="chat-input" type="password" autocomplete="off" placeholder="password" required />
-          <button type="submit" class="chat-btn">enter</button>
-        </form>
-        <div id="passwordError" class="chat-error hidden">wrong password</div>
-        <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
-      </div>
-
-      <div class="chat-view chat-view-room">
-        <div class="chat-room-header">
-          <button class="chat-btn chat-back-btn" type="button" data-target="picker">back</button>
-          <div id="chatRoomTitle" class="chat-room-title">chat</div>
-        </div>
-        <div id="chatPresence" class="chat-presence" aria-live="polite">online: —</div>
-        <ul id="chatMessages" class="chat-messages"></ul>
-        <div id="chatTyping" class="chat-typing" aria-live="polite"></div>
-        <div id="chatReplyBar" class="chat-reply-bar hidden">
-          <span class="chat-reply-bar-text">replying to <span id="chatReplyBarWho" class="presence-user"></span> <span id="chatReplyBarPreview"></span></span>
-          <button id="chatReplyCancel" class="chat-reply-cancel" type="button" aria-label="cancel reply">&times;</button>
-        </div>
-        <div id="chatRateWarn" class="chat-rate-warn hidden">slow down...</div>
-        <form id="chatMessageForm" class="chat-message-form">
-          <input id="chatMessageInput" class="chat-message-input" type="text" maxlength="500" autocomplete="off" placeholder="type a message..." required />
-          <button type="submit" class="chat-btn chat-send-btn">send</button>
-        </form>
+        <button id="authToggleBtn" class="text-btn" type="button">need an account? create one</button>
       </div>
     </div>
-  </div>
 
-  <button id="backToSiteBtn" class="chat-back-to-site" type="button">back to bingbof.lol</button>
+    <div class="chat-picker">
+      <h2 class="chat-title">pick a chat</h2>
+      <!-- filled from CHAT_ROOMS in chat.js, same source as the rail -->
+      <div id="chatPickerList" class="picker-list"></div>
+      <div class="picker-me">
+        <span>logged in as <span class="js-whoami presence-user">&mdash;</span></span>
+        <button class="js-logout text-btn" type="button">log out</button>
+      </div>
+    </div>
+
+    <div class="chat-shell">
+      <aside class="chat-rail">
+        <a class="rail-home" href="/">
+          <img class="rail-orb" src="/img/orb.png" alt="" draggable="false" />
+          <span class="rail-home-label">bingbof.lol</span>
+        </a>
+
+        <!-- filled from CHAT_ROOMS in chat.js -->
+        <nav id="chatRoomList" class="rail-rooms" aria-label="rooms"></nav>
+
+        <div class="rail-me">
+          <span class="rail-me-line">logged in as <span class="js-whoami presence-user">&mdash;</span></span>
+          <button class="js-logout text-btn" type="button">log out</button>
+        </div>
+      </aside>
+
+      <main class="chat-main">
+        <header class="chat-head">
+          <div class="chat-head-inner">
+            <div id="chatRoomTitle" class="chat-room-title">chat</div>
+            <div id="chatPresence" class="chat-presence" aria-live="polite">online: &mdash;</div>
+          </div>
+        </header>
+
+        <div class="chat-body">
+          <ul id="chatMessages" class="chat-messages"></ul>
+
+          <div class="chat-empty">pick a room</div>
+
+          <div class="chat-unlock">
+            <h2 class="chat-title">enter password</h2>
+            <form id="passwordForm" class="chat-form">
+              <input id="passwordInput" class="chat-input" type="password" autocomplete="off" placeholder="password" required />
+              <button type="submit" class="btn chat-btn">enter</button>
+            </form>
+            <div id="passwordError" class="chat-error hidden">wrong password</div>
+          </div>
+        </div>
+
+        <!-- typing and the rate warning are positioned over this element's top
+             edge rather than sitting in the column, which is what keeps an
+             empty state from reserving ~70px of dead space -->
+        <footer class="chat-compose">
+          <div id="chatReplyBar" class="chat-reply-bar hidden">
+            <span class="chat-reply-bar-text">replying to <span id="chatReplyBarWho" class="presence-user"></span> <span id="chatReplyBarPreview"></span></span>
+            <button id="chatReplyCancel" class="chat-reply-cancel" type="button" aria-label="cancel reply">&times;</button>
+          </div>
+
+          <form id="chatMessageForm" class="chat-message-form">
+            <input id="chatMessageInput" class="chat-input chat-message-input" type="text" maxlength="500" autocomplete="off" placeholder="type a message..." required />
+            <button type="submit" class="btn chat-btn">send</button>
+          </form>
+
+          <div id="chatTyping" class="chat-typing" aria-live="polite"></div>
+          <div id="chatRateWarn" class="chat-rate-warn hidden">slow down...</div>
+        </footer>
+      </main>
+    </div>
+  </div>
 
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+  <script src="/js/background.js"></script>
   <script src="chat.js"></script>
 </body>
 </html>

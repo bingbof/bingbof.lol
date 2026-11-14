@@ -18,6 +18,8 @@ const firebaseConfig = {
 // encrypted rooms prompt for a password, derive an AES-GCM key from it
 // (PBKDF2), and only ever send/store ciphertext — the password itself never
 // appears in this file or reaches the server.
+// the picker buttons are built from this list. the room ids are also
+// allow-listed in database.rules.json — keep the two in sync.
 const CHAT_ROOMS = {
   chat1: { label: 'chat',                     encrypted: false },
   chat2: { label: 'k-pop finger heart emoji', encrypted: true  },
@@ -82,7 +84,6 @@ async function safeDecrypt(key, blob, stats) {
 }
 
 const chatOverlay       = document.getElementById('chatOverlay');
-const backToSiteBtn     = document.getElementById('backToSiteBtn');
 const authTitle         = document.getElementById('authTitle');
 const authForm          = document.getElementById('authForm');
 const authUsernameInput = document.getElementById('authUsernameInput');
@@ -91,8 +92,10 @@ const authConfirmInput  = document.getElementById('authConfirmInput');
 const authError         = document.getElementById('authError');
 const authSubmitBtn     = document.getElementById('authSubmitBtn');
 const authToggleBtn     = document.getElementById('authToggleBtn');
-const chatWhoamiEl      = document.getElementById('chatWhoami');
-const logoutBtn         = document.getElementById('logoutBtn');
+const whoamiEls         = document.querySelectorAll('.js-whoami');
+const chatRoomList      = document.getElementById('chatRoomList');
+const chatPickerList    = document.getElementById('chatPickerList');
+const logoutBtns        = document.querySelectorAll('.js-logout');
 const passwordForm      = document.getElementById('passwordForm');
 const passwordInput     = document.getElementById('passwordInput');
 const passwordError     = document.getElementById('passwordError');
@@ -164,6 +167,10 @@ const RATE_WINDOW_MS       = 10000;
 const RATE_MAX_IN_WINDOW   = 6;
 let sendTimestamps = [];
 let lastSendAt     = 0;
+
+// the server-side gate needs deployed rules; see the send handler
+let rateGateEnabled = true;
+let rateGateProven  = false;
 let rateWarnTimer  = null;
 
 const USER_EMAIL_DOMAIN = 'users.bingbof.lol';
@@ -173,7 +180,7 @@ let firebaseAuth      = null;
 let firebaseAuthReady = false;
 
 try {
-  if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== 'REPLACE_ME') {
+  if (typeof firebase !== 'undefined') {
     firebase.initializeApp(firebaseConfig);
     firebaseDb   = firebase.database();
     firebaseAuth = firebase.auth();
@@ -181,15 +188,6 @@ try {
   }
 } catch (e) {
   console.warn('firebase init failed', e);
-}
-
-// ---- "back to bingbof.lol" (bottom-left) --------------------------
-if (backToSiteBtn) {
-  backToSiteBtn.addEventListener('click', () => {
-    const home = window.location.origin + '/';
-    try { (window.top || window).location.href = home; }
-    catch (e) { window.location.href = home; }
-  });
 }
 
 // ---- account helpers -------------------------------------------------
@@ -225,7 +223,7 @@ function enterAuthedState(uid, username) {
   chatUid           = uid;
   chatUsername      = username || null;
   firebaseAuthReady = !!username;
-  if (chatWhoamiEl) chatWhoamiEl.textContent = username || '—';
+  whoamiEls.forEach(el => { el.textContent = username || '—'; });
   if (username && chatOverlay.dataset.view === 'auth') showPicker();
 }
 
@@ -249,7 +247,7 @@ function handleAuthState(user) {
     firebaseAuthReady = false;
     lastReadMap       = {};
     profileCreatedAt  = 0;
-    if (chatWhoamiEl) chatWhoamiEl.textContent = '—';
+    whoamiEls.forEach(el => { el.textContent = '—'; });
     leaveRoom();
     setAuthMode('login');
     setChatView('auth');
@@ -263,6 +261,19 @@ function showPicker() {
 
 function setChatView(view) {
   chatOverlay.dataset.view = view;
+}
+
+// which of the three panes the main column shows: empty | locked | room
+function setPane(pane) {
+  chatOverlay.dataset.pane = pane;
+}
+
+function markActiveRoom(roomId) {
+  if (!chatRoomList) return;
+  chatRoomList.querySelectorAll('.rail-room').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.room === roomId);
+    btn.setAttribute('aria-current', btn.dataset.room === roomId ? 'true' : 'false');
+  });
 }
 
 // ---- auth view (log in / create account) ---------------------------
@@ -357,35 +368,72 @@ if (authForm) {
   });
 }
 
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', () => {
+logoutBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
     if (currentRoom) leaveRoom();
     if (firebaseAuth) firebaseAuth.signOut().catch(() => {});
     setAuthMode('login');
     setChatView('auth');
   });
-}
+});
 
 setAuthMode('login');
 if (authUsernameInput) setTimeout(() => authUsernameInput.focus(), 50);
 
-document.querySelectorAll('.chat-picker-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const room = btn.dataset.room;
-    const cfg  = CHAT_ROOMS[room];
-    if (!cfg) return;
-    if (!cfg.encrypted) {
-      enterRoom(room, cfg.label, null);
-      return;
-    }
-    pendingRoom = room;
-    passwordInput.value = '';
-    passwordError.textContent = 'wrong password';
-    passwordError.classList.add('hidden');
-    setChatView('password');
-    setTimeout(() => passwordInput.focus(), 50);
-  });
+// ---- room lists -----------------------------------------------------
+// the selection screen and the rail are built from CHAT_ROOMS by the same
+// function, so room ids still live in exactly one place
+function buildRoomButton(roomId, variant) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = variant === 'rail' ? 'rail-room' : 'btn picker-room';
+  btn.dataset.room = roomId;
+
+  const name = document.createElement('span');
+  name.className = variant === 'rail' ? 'rail-room-name' : 'picker-room-name';
+  name.textContent = CHAT_ROOMS[roomId].label;
+
+  const missed = document.createElement('span');
+  missed.className = 'rail-room-missed js-missed';
+  missed.hidden = true;
+
+  btn.appendChild(name);
+  btn.appendChild(missed);
+  btn.addEventListener('click', () => openRoom(roomId));
+  return btn;
+}
+
+Object.keys(CHAT_ROOMS).forEach(roomId => {
+  if (chatRoomList)   chatRoomList.appendChild(buildRoomButton(roomId, 'rail'));
+  if (chatPickerList) chatPickerList.appendChild(buildRoomButton(roomId, 'picker'));
 });
+
+function openRoom(roomId) {
+  const cfg = CHAT_ROOMS[roomId];
+  if (!cfg) return;
+
+  // already in it — just make sure the shell is showing
+  if (roomId === currentRoom) { setChatView('app'); return; }
+
+  // switching straight from another room: tear that one down first, or its
+  // presence and typing listeners leak into the new one
+  leaveRoom();
+  setChatView('app');
+
+  if (!cfg.encrypted) {
+    enterRoom(roomId, cfg.label, null);
+    return;
+  }
+
+  pendingRoom = roomId;
+  markActiveRoom(roomId);
+  chatRoomTitle.textContent = cfg.label;
+  passwordInput.value = '';
+  passwordError.textContent = 'wrong password';
+  passwordError.classList.add('hidden');
+  setPane('locked');
+  setTimeout(() => passwordInput.focus(), 50);
+}
 
 passwordForm.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -414,23 +462,13 @@ passwordForm.addEventListener('submit', async (e) => {
 function rejectRoomKey(roomId) {
   leaveRoom();
   pendingRoom = roomId;
-  setChatView('password');
+  markActiveRoom(roomId);
+  setPane('locked');
   passwordError.textContent = 'wrong password';
   passwordError.classList.remove('hidden');
   passwordInput.value = '';
   setTimeout(() => passwordInput.focus(), 50);
 }
-
-document.querySelectorAll('.chat-back-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const target = btn.dataset.target;
-    if (target === 'picker') {
-      pendingRoom = null;
-      leaveRoom();
-      showPicker();
-    }
-  });
-});
 
 function enterRoom(roomId, label, key) {
   currentRoom = roomId;
@@ -441,7 +479,8 @@ function enterRoom(roomId, label, key) {
   hideRateWarn();
   clearReplyTarget();
   sendTimestamps = [];
-  setChatView('room');
+  markActiveRoom(roomId);
+  setPane('room');
   setTimeout(() => chatMessageInput.focus(), 50);
 
   if (!firebaseDb) {
@@ -514,9 +553,19 @@ function attachRoom(roomId) {
       let newestMsg = null;
       let prevUid = null;
       let prevAction = false;
+      let prevDay = null;
       items.forEach(it => {
         const v = it.view;
         const isAction = !!(v.text && v.text.startsWith('/me '));
+        // a bare clock is ambiguous once a room spans days
+        const day = v.ts ? new Date(v.ts).toDateString() : null;
+        if (day && day !== prevDay) {
+          renderDaySeparator(v.ts);
+          prevDay = day;
+          prevUid = null;          // never group across a day boundary
+          prevAction = false;
+        }
+
         const grouped = !isAction && !prevAction && !v.replyTo &&
                         !!v.uid && v.uid === prevUid;
         renderMessage(it.key, v, grouped);
@@ -580,16 +629,16 @@ function refreshMissedCounts() {
 }
 
 function updateMissedBadge(roomId, count, capped) {
-  const btn = document.querySelector('.chat-picker-btn[data-room="' + roomId + '"]');
-  const el = btn && btn.querySelector('.chat-picker-missed');
-  if (!el) return;
-  if (count > 0) {
-    el.textContent = (capped ? '99+' : count) + ' missed message' + (count === 1 ? '' : 's');
-    el.hidden = false;
-  } else {
-    el.textContent = '';
-    el.hidden = true;
-  }
+  const els = document.querySelectorAll('[data-room="' + roomId + '"] .js-missed');
+  els.forEach(el => {
+    if (count > 0) {
+      el.textContent = (capped ? '99+' : count) + ' missed message' + (count === 1 ? '' : 's');
+      el.hidden = false;
+    } else {
+      el.textContent = '';
+      el.hidden = true;
+    }
+  });
 }
 
 // ---- typing indicators --------------------------------------------
@@ -765,6 +814,12 @@ function leaveRoom() {
   clearReplyTarget();
   leaveTyping();
   leavePresence();
+  markActiveRoom(null);
+  // drop the old room's messages: entering a locked room never reaches
+  // enterRoom(), so without this the previous room stays rendered behind
+  // the unlock prompt
+  if (chatMessagesEl) chatMessagesEl.innerHTML = '';
+  if (chatPresenceEl) chatPresenceEl.textContent = 'online: —';
   currentRoom     = null;
   roomKey         = null;
   roomKeyChecked  = false;
@@ -832,6 +887,30 @@ function renderPresence(users) {
   });
 }
 
+function formatDay(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  if (sameDay(d, now))       return 'today';
+  if (sameDay(d, yesterday)) return 'yesterday';
+
+  const opts = { weekday: 'short', month: 'short', day: 'numeric' };
+  if (d.getFullYear() !== now.getFullYear()) opts.year = 'numeric';
+  return d.toLocaleDateString('en-US', opts);
+}
+
+function renderDaySeparator(ts) {
+  const li = document.createElement('li');
+  li.className = 'chat-day';
+  const span = document.createElement('span');
+  span.textContent = formatDay(ts);
+  li.appendChild(span);
+  chatMessagesEl.appendChild(li);
+}
+
 function formatTime(ts) {
   if (!ts) return '';
   const d = new Date(ts);
@@ -853,7 +932,7 @@ function renderMessage(key, msg, grouped) {
   // hover "reply" affordance — clicks handled via delegation on the list
   const replyBtn = document.createElement('button');
   replyBtn.type = 'button';
-  replyBtn.className = 'chat-msg-reply-btn';
+  replyBtn.className = 'btn chat-msg-reply-btn';
   replyBtn.textContent = 'reply';
   li.appendChild(replyBtn);
 
@@ -967,11 +1046,11 @@ if (chatMessageInput) {
   });
 }
 
-function showRateWarn(msg) {
+function showRateWarn(msg, ms) {
   chatRateWarnEl.textContent = msg;
   chatRateWarnEl.classList.remove('hidden');
   if (rateWarnTimer) clearTimeout(rateWarnTimer);
-  rateWarnTimer = setTimeout(hideRateWarn, 1800);
+  rateWarnTimer = setTimeout(hideRateWarn, ms || 1800);
 }
 
 function hideRateWarn() {
@@ -981,8 +1060,7 @@ function hideRateWarn() {
 
 function renderSystemMessage(text) {
   const li = document.createElement('li');
-  li.className = 'chat-message';
-  li.style.opacity = '0.5';
+  li.className = 'chat-message chat-message-system';
   li.textContent = text;
   chatMessagesEl.appendChild(li);
 }
@@ -1023,6 +1101,32 @@ chatMessageForm.addEventListener('submit', async (e) => {
   // room changed while we were encrypting — drop it
   if (currentRoom !== room) return;
 
+  // Server-side throttle: the rules only accept a message whose ts lands just
+  // after a fresh users/<uid>/lastPost bump, and they cap bumps at one per
+  // 500ms, so a direct SDK call can't outrun the limit the UI shows.
+  //
+  // It only works once database.rules.json is DEPLOYED. Against rules without
+  // the lastPost node, `$other: {".validate": false}` rejects every bump — so
+  // the first failure is read as "not deployed" and the gate switches itself
+  // off rather than blocking every send forever. Once the gate is known good,
+  // a later rejection is a real rate limit and does stop the send.
+  if (rateGateEnabled) {
+    try {
+      await firebaseDb.ref('users/' + chatUid + '/lastPost')
+        .set(firebase.database.ServerValue.TIMESTAMP);
+      rateGateProven = true;
+    } catch (err) {
+      if (rateGateProven) {
+        showRateWarn('slow down...');
+        return;
+      }
+      rateGateEnabled = false;
+      console.warn('[chat] rate gate off (' + describeDbError(err) +
+        ') — sending without it; deploy database.rules.json to enable', err);
+    }
+  }
+  if (currentRoom !== room) return;
+
   lastSendAt = now;
   sendTimestamps.push(now);
   hideRateWarn();
@@ -1037,9 +1141,22 @@ chatMessageForm.addEventListener('submit', async (e) => {
     payload.replyTo = { id: reply.id, user: reply.user, text: replyField };
   }
 
-  firebaseDb.ref('chats/' + room + '/messages').push(payload)
-    .catch(err => console.warn('send failed', err));
+  const sending = firebaseDb.ref('chats/' + room + '/messages').push(payload);
   chatMessageInput.value = '';
   clearReplyTarget();
   stopTyping();
+
+  // never eat a message silently: put the text back and say what refused it
+  sending.catch(err => {
+    console.warn('send failed', err);
+    if (!chatMessageInput.value) chatMessageInput.value = text;
+    showRateWarn("couldn't send: " + describeDbError(err), 6000);
+  });
 });
+
+function describeDbError(err) {
+  const code = String((err && (err.code || err.message)) || 'unknown error');
+  if (/permission.?denied/i.test(code)) return 'permission denied';
+  if (/network|disconnect|offline/i.test(code)) return 'network error';
+  return code.toLowerCase();
+}

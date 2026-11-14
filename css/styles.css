@@ -1,0 +1,1019 @@
+/* ============================================================
+   TOKENS
+   /chat/chat.css is loaded after this file and depends on the
+   token names below, plus .btn and .hidden. Renaming any of
+   them means updating chat.css too.
+   ============================================================ */
+:root {
+  --font: 'ArialTall', Arial, Helvetica, sans-serif;
+
+  --bg: #000;
+  --fg: #fff;
+  --fg-soft: rgba(255, 255, 255, 0.85);
+  --fg-muted: rgba(255, 255, 255, 0.55);
+  --fg-faint: rgba(255, 255, 255, 0.3);
+  --fg-inverted-muted: rgba(0, 0, 0, 0.6);
+
+  --line: rgba(255, 255, 255, 0.55);
+  --line-soft: rgba(255, 255, 255, 0.3);
+  --glass: rgba(0, 0, 0, 0.35);
+
+  --error: #ff8a8a;
+
+  --glow: 0 0 18px rgba(255, 255, 255, 0.45);
+  --glow-input: 0 0 12px rgba(255, 255, 255, 0.35);
+
+  --t-fast: 0.2s ease;
+
+  /* one dial for letter-spacing site-wide. the reference image measures at
+     ~0.01em (its airiness comes from the condensed letterforms, not tracking);
+     this is set deliberately looser. the ring's 8.87px is geometry-locked and
+     opts out, as do the 0.08em presence labels and the 0.2em date line. */
+  --tracking: 0.07em;
+
+  /* capped at the orb's native 400px so it never upscales and softens */
+  --orb-size: clamp(200px, 32vmin, 400px);
+  --orbit-size: calc(var(--orb-size) * 1.4);
+  --dock-x: 26vw;        /* how far left the orb travels for the menu */
+
+  --vignette: radial-gradient(
+    ellipse at center,
+    transparent 30%,
+    rgba(0, 0, 0, 0.5) 58%,
+    rgba(0, 0, 0, 0.85) 82%,
+    rgba(0, 0, 0, 0.97) 100%
+  );
+}
+
+/* ============================================================
+   CUSTOM FONT — Arimo (SIL OFL 1.1), stretched 145% vertically.
+   See fonts/OFL.txt. Horizontal metrics are untouched, so real Arial
+   is a clean metric-compatible fallback.
+   ============================================================ */
+@font-face {
+  font-family: 'ArialTall';
+  src: url('/fonts/arial-tall.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'ArialTall';
+  src: url('/fonts/arial-tall-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Cree syllabics, merged into the same family by unicode-range so they get
+   the same 1.45 stretch instead of falling through to an unstretched system
+   face. Noto Sans Canadian Aboriginal (SIL OFL 1.1) — see
+   fonts/OFL-NotoSansCanadianAboriginal.txt. Subset to exactly these codepoints;
+   adding syllabics means rebuilding the font and extending this list. */
+@font-face {
+  font-family: 'ArialTall';
+  src: url('/fonts/arial-tall-syllabics.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+1424, U+1426, U+1432, U+148B, U+14A5, U+14AA, U+14AB, U+14BC, U+14EF;
+}
+
+@font-face {
+  font-family: 'ArialTall';
+  src: url('/fonts/arial-tall-syllabics-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+1424, U+1426, U+1432, U+148B, U+14A5, U+14AA, U+14AB, U+14BC, U+14EF;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  letter-spacing: var(--tracking);
+  overflow: hidden;
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+/* opacity alone leaves an element in the tab order, so anything faded out
+   also goes visibility:hidden — delayed by the fade so the transition is
+   still seen on the way out */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: opacity 0.4s ease, visibility 0s;
+}
+
+.hidden,
+.hidden-initial {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.screen.hidden {
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+
+/* ============================================================
+   BUTTON COMPONENT
+   .btn carries the whole visual treatment; everything else
+   (.enter, .menu-btn, .chat-btn …) only adjusts size/layout.
+   ============================================================ */
+.btn {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: inherit;
+  font-family: var(--font);
+  cursor: pointer;
+  letter-spacing: var(--tracking);
+  text-decoration: none;
+  text-align: center;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: background var(--t-fast), color var(--t-fast),
+              border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+/* disabled buttons (chat forms mid-request) get no hover, like the orb */
+.btn:not(:disabled):hover,
+.btn:focus-visible {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+  outline: none;
+  box-shadow: var(--glow);
+}
+
+.btn:disabled {
+  cursor: default;
+}
+
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.nav-arrow {
+  flex: none;
+  fill: currentColor;
+}
+
+/* ============================================================
+   LANDING
+   ============================================================ */
+#landing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.enter {
+  font-size: 1.4rem;
+  padding: 0.8rem 1.8rem;
+}
+
+/* ============================================================
+   HOME
+   ============================================================ */
+#home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  transition: opacity 0.4s ease;
+}
+
+/* ============================================================
+   MENU DOCK
+   The orb is part of the menu now, not something it covers — so
+   no blur. .orb-dock owns nothing but this transform, which is
+   why it can exist at all without breaking the beat below it.
+   translateX() before rotate() spins the orb about its own centre
+   and then moves it; reversed, it would swing around the screen.
+   ============================================================ */
+.orb-dock {
+  transition: transform 0.9s cubic-bezier(0.65, 0, 0.3, 1) 0.1s;
+}
+
+#home.menu-open .orb-dock {
+  transform: translateX(calc(-1 * var(--dock-x))) rotate(-360deg);
+}
+
+/* home stacking order, bottom to top:
+   0 background canvas · 1 scanlines · 2 vignette · 3 orb stage */
+/* fixed, not absolute: on /chat/ these are children of <body>, which is not
+   positioned, so an absolute inset would resolve against the initial
+   containing block rather than a fixed parent as it does inside #home */
+.bg-canvas,
+.bg-scan {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* for pages that have no #home to hang ::before off, chiefly /chat/ */
+.bg-vignette {
+  position: fixed;
+  inset: -5%;
+  z-index: 2;
+  pointer-events: none;
+  background: var(--vignette);
+}
+
+.bg-canvas {
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* CSS rather than canvas so the lines stay crisp instead of being
+   resampled along with the reduced-resolution backing store */
+.bg-scan {
+  z-index: 1;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.022) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* oversized so the slowest parallax layer can shift without ever pulling an
+   undarkened edge into view */
+#home::before {
+  content: "";
+  position: absolute;
+  inset: -5%;
+  z-index: 2;
+  transform: translate3d(var(--plx-x, 0px), var(--plx-y, 0px), 0);
+  background: var(--vignette);
+  pointer-events: none;
+}
+
+/* ============================================================
+   ORB + ORBITING TEXT
+   The stage is sized to the orbit ring; the orb sits centred
+   inside it. Two nested layers animate separately so neither
+   transform overwrites the other: .orbit scales out from the
+   centre once, .orbit-spin rotates forever.
+   ============================================================ */
+/* the beat lives on the stage, so the orb and the ring pump together as one
+   object. it is a different element from .orb-btn (hover scale), .orbit
+   (emerge) and .orbit-spin (rotation), so none of the four transforms
+   overwrite each other — they compose. --beat is set from script.js. */
+.orb-stage {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: var(--orbit-size);
+  height: var(--orbit-size);
+}
+
+.orb-stage.bumping {
+  animation: orb-beat var(--beat, 422.54ms) linear infinite;
+}
+
+/* the screen pumps too, at a fifth of the orb's amplitude. it scales only
+   upward from 1, so the background canvas never pulls away from the edges */
+#home.bumping,
+#menuOverlay.bumping,
+.audio-bar.bumping {
+  animation: screen-beat var(--beat, 422.54ms) linear infinite;
+}
+
+/* anchored to its own corner, or scaling would walk it off the edge */
+.audio-bar {
+  transform-origin: bottom right;
+}
+
+@keyframes screen-beat {
+  0%   { transform: scale(1.012); animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
+  55%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes orb-beat {
+  /* instant hit on the downbeat, eased decay, then hold until the next one */
+  0%   { transform: scale(1.055); animation-timing-function: cubic-bezier(0.2, 0.7, 0.3, 1); }
+  55%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
+/* parallax layers. they hold nothing but the translate, so they never
+   collide with the beat above or the hover/emerge/rotate below. the ring
+   travels further than the orb — that difference is the depth cue. */
+.plx {
+  will-change: transform;
+}
+
+.plx-orb {
+  position: relative;
+  z-index: 3;
+}
+
+/* the ring's own opacity is owned by the orbit-emerge animation
+   (fill: both), which beats any transition set on .orbit — so the
+   dock fade goes on this wrapper, whose opacity nothing else touches */
+.plx-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity 0.3s ease 0.7s;     /* on the way back */
+}
+
+#home.menu-open .plx-ring {
+  opacity: 0;
+  transition: opacity 0.25s ease 0s;      /* leaves before the orb moves */
+}
+
+/* the docked ring is the opposite of click me: hidden on the home screen,
+   emerging from the orb's centre once it has landed on the left */
+.plx-dock-ring {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s ease 0s;       /* leaves as the orb heads home */
+}
+
+#home.menu-open .plx-dock-ring {
+  opacity: 1;
+  transition: opacity 0.4s ease 0.9s;     /* waits for the dock to land */
+}
+
+.dock-orbit {
+  width: 100%;
+  height: 100%;
+}
+
+#home.menu-open .dock-orbit {
+  animation: orbit-emerge 0.9s cubic-bezier(0.22, 0.68, 0.3, 1) 0.9s both;
+}
+
+/* solved like click me: 4 repeats, 2πr = 1445 user units */
+.orbit-text.dock-orbit-text {
+  letter-spacing: 8.71px;
+}
+
+/* after the first open-and-return the user knows what the orb does, so the
+   ring never comes back — set once in closeMenu() and never removed */
+#home.ring-retired .plx-ring {
+  opacity: 0;
+}
+
+.orb-btn {
+  position: relative;
+  z-index: 3;
+  width: var(--orb-size);
+  height: var(--orb-size);
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: transform 0.35s ease, filter 0.35s ease;
+}
+
+.orb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* not clickable until the ring has appeared */
+.orb-btn:disabled {
+  cursor: default;
+}
+
+/* drop-shadow follows the PNG's alpha, so the halo hugs the orb
+   itself rather than its bounding box */
+.orb-btn:enabled:hover,
+.orb-btn:focus-visible {
+  outline: none;
+  transform: scale(1.04);
+  filter: drop-shadow(0 0 30px rgba(255, 255, 255, 0.5));
+}
+
+.orbit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  animation: orbit-emerge 0.9s cubic-bezier(0.22, 0.68, 0.3, 1) both;
+}
+
+/* before the reveal fires there is no animation to run */
+.orbit.hidden-initial {
+  animation: none;
+  opacity: 0;
+}
+
+.orbit-spin {
+  width: 100%;
+  height: 100%;
+  animation: orbit-rotate 18s linear infinite;
+}
+
+.orbit-spin.orbit-fast {
+  animation-duration: 4s;
+}
+
+.orbit-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* font-size, tracking and the five repeats in the markup are solved together
+   against the path's circumference (2π·230 ≈ 1445 user units) so the ring
+   closes on itself with no seam. Changing any one means re-solving. */
+.orbit-text {
+  font-family: var(--font);
+  font-size: 40px;        /* viewBox units — scales with the stage */
+  font-weight: 700;
+  letter-spacing: 8.87px;
+  fill: var(--fg);
+}
+
+@keyframes orbit-emerge {
+  from { opacity: 0; transform: scale(0); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes orbit-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes orbit-rotate {
+  from { transform: rotate(0deg);   }
+  to   { transform: rotate(360deg); }
+}
+
+/* the ring keeps turning on hover — only a backgrounded tab stops it */
+
+/* ============================================================
+   AUDIO BAR
+   Rebuilt from the 1.2.x player (git cf707e8) in the current
+   token language. Vendor track/thumb pseudo-elements get one
+   rule per engine — a browser drops a whole selector list
+   containing one it does not recognise.
+   ============================================================ */
+/* belongs to the menu, not the home screen — shown by openMenu(), and on the
+   same 0.6s delay as .menu-inner so the two arrive together */
+.audio-bar {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  /* wide enough that the volume slider can expand without squashing siblings */
+  width: min(430px, 46vw);
+  font-family: var(--font);
+  transition: opacity 0.4s ease 0.6s, visibility 0s;
+}
+
+.audio-bar.hidden {
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.audio-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.62rem;
+  letter-spacing: var(--tracking);
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-time { min-width: 2.6em; text-align: center; }
+.audio-progress { text-transform: lowercase; }
+.audio-time-current { color: var(--fg); }
+
+/* 18px tall for a usable hit target; the visible track is 3px, centred */
+.audio-scrubber {
+  flex: 1;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  /* declared once here; the two vendor track rules below must stay separate,
+     since an unknown pseudo in a selector list drops the whole rule */
+  --seek-track: linear-gradient(to right,
+    var(--fg) 0, var(--fg) var(--seek-pct, 0%),
+    rgba(255, 255, 255, 0.22) var(--seek-pct, 0%), rgba(255, 255, 255, 0.22) 100%);
+}
+
+.audio-scrubber::-webkit-slider-runnable-track {
+  height: 3px;
+  background: var(--seek-track);
+}
+
+.audio-scrubber::-moz-range-track {
+  height: 3px;
+  background: var(--seek-track);
+}
+
+.audio-scrubber::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 4px;
+  height: 12px;
+  margin-top: -4.5px;
+  border: none;
+  border-radius: 0;
+  background: var(--fg);
+}
+
+.audio-scrubber::-moz-range-thumb {
+  width: 4px;
+  height: 12px;
+  border: none;
+  border-radius: 0;
+  background: var(--fg);
+}
+
+.audio-controls {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.viz-canvas {
+  display: block;
+  width: 80px;
+  height: 22px;
+  opacity: 0.8;
+}
+
+.now-playing {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  line-height: 1.45;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.np-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  color: var(--fg-muted);
+}
+
+.np-title {
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking);
+  color: var(--fg);
+  white-space: nowrap;
+}
+
+.np-artist {
+  font-size: 0.72rem;
+  letter-spacing: var(--tracking);
+  color: rgba(255, 255, 255, 0.65);
+  white-space: nowrap;
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color var(--t-fast);
+}
+
+.icon-btn:hover, .icon-btn:focus-visible {
+  color: var(--fg);
+  outline: none;
+}
+
+.pp-icon, .mute-icon { display: none; }
+#playPauseBtn .pp-icon-pause { display: block; }
+#playPauseBtn.paused .pp-icon-pause { display: none; }
+#playPauseBtn.paused .pp-icon-play { display: block; }
+#muteBtn .mute-icon-on { display: block; }
+#muteBtn.muted .mute-icon-on { display: none; }
+#muteBtn.muted .mute-icon-off { display: block; }
+
+/* the slider stays collapsed until the control is hovered or focused */
+.volume-control {
+  display: flex;
+  align-items: center;
+}
+
+.volume-slider {
+  width: 0;
+  opacity: 0;
+  height: 3px;
+  margin: 0;
+  pointer-events: none;
+  background: linear-gradient(to right,
+    var(--fg) 0, var(--fg) var(--vol-pct, 50%),
+    rgba(255, 255, 255, 0.22) var(--vol-pct, 50%), rgba(255, 255, 255, 0.22) 100%);
+  cursor: pointer;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: width 0.25s ease, opacity 0.22s ease, margin 0.25s ease;
+}
+
+.volume-control:hover .volume-slider,
+.volume-control:focus-within .volume-slider {
+  width: 76px;
+  opacity: 1;
+  margin-right: 0.55rem;
+  pointer-events: auto;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 4px;
+  height: 11px;
+  margin-top: -4px;
+  border: none;
+  border-radius: 0;
+  background: var(--fg);
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 4px;
+  height: 11px;
+  border: none;
+  border-radius: 0;
+  background: var(--fg);
+}
+
+/* ============================================================
+   MENU OVERLAY
+   ============================================================ */
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+  overflow: hidden;
+}
+
+.menu-overlay.show {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.35s ease, visibility 0s;
+}
+
+/* the overlay spans the viewport, docked orb included, so it must never
+   take the pointer — only the panel does */
+.menu-overlay,
+.menu-overlay.show {
+  pointer-events: none;
+}
+
+/* ============================================================
+   MENU PANEL — the right half
+   ============================================================ */
+.menu-panel {
+  position: absolute;
+  left: 52%;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4.5rem 1.5rem 2rem;
+  box-sizing: border-box;
+  pointer-events: auto;
+  will-change: transform;
+}
+
+/* the panel itself carries the parallax translate written from script.js,
+   so the entrance animation lives one layer in — same rule as everywhere
+   else here: one transform per element */
+.menu-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  width: 100%;
+  opacity: 0;
+  transform: translateX(28px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* buttons arrive only once the orb has finished travelling */
+.menu-overlay.show .menu-inner {
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.4s ease 0.6s,
+              transform 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) 0.6s;
+}
+
+/* grid-stacking rather than absolute positioning: every view sits in the
+   same cell, so the stage sizes itself to the tallest one and the back
+   button below it never jumps as views change */
+.view-stage {
+  display: grid;
+  width: 100%;
+}
+
+.menu-view {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transform: translateX(40px);
+  transition: opacity 0.3s ease,
+              transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1),
+              visibility 0s linear 0.35s;
+  box-sizing: border-box;
+}
+
+/* going deeper pushes the main list out to the left, so the movement
+   reads as direction rather than a swap */
+.menu-overlay[data-view="socials"] .view-main,
+.menu-overlay[data-view="friends"] .view-main {
+  transform: translateX(-40px);
+}
+
+.menu-overlay.show[data-view="main"]    .view-main,
+.menu-overlay.show[data-view="socials"] .view-socials,
+.menu-overlay.show[data-view="friends"] .view-friends {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transform: none;
+  transition: opacity 0.3s ease,
+              transform 0.35s cubic-bezier(0.2, 0.7, 0.3, 1),
+              visibility 0s;
+}
+
+.nav-btn {
+  font-size: 0.9rem;
+  padding: 0.45rem 1.2rem;
+}
+
+/* On the main list the orb is the only way out, so the button is hidden —
+   but it keeps its space in the flex column. display:none would resize the
+   centred stack the moment it appeared, shunting the whole panel upward
+   mid-transition and making the slide look like it stutters. */
+#viewBackBtn {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease, visibility 0s,
+              background var(--t-fast), color var(--t-fast),
+              border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.menu-overlay[data-view="main"] #viewBackBtn {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
+}
+
+.menu-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  align-items: center;
+}
+
+.menu-btn {
+  font-size: 1.3rem;
+  padding: 0.85rem 0;
+  width: 280px;
+}
+
+.view-title {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  margin: 0 0 1.6rem;
+  letter-spacing: var(--tracking);
+  color: var(--fg);
+  text-align: center;
+}
+
+.socials-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(440px, 92vw);
+  align-items: stretch;
+}
+
+.socials-list li { display: flex; }
+
+.social-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 0;
+  padding: 0.95rem 1.4rem;
+  font-size: 1.02rem;
+  line-height: 1.3;
+  letter-spacing: var(--tracking);
+  text-align: left;
+}
+
+.social-name { font-weight: 700; }
+
+.social-handle {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  transition: color var(--t-fast);
+}
+
+.social-link:hover .social-handle,
+.social-link:focus-visible .social-handle {
+  color: var(--fg-inverted-muted);
+}
+
+/* ============================================================
+   DATE / TIME
+   ============================================================ */
+.date-time {
+  position: fixed;
+  top: 1rem;
+  right: 1.2rem;
+  z-index: 50;
+  text-align: right;
+  font-family: var(--font);
+  pointer-events: none;
+}
+
+.dt-time {
+  font-size: 1.05rem;
+  color: var(--fg);
+  letter-spacing: var(--tracking);
+  font-variant-numeric: tabular-nums;
+  text-transform: lowercase;
+  line-height: 1.1;
+}
+
+.dt-date {
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  color: var(--fg-muted);
+  margin-top: 0.22rem;
+}
+
+/* ============================================================
+   MOBILE WARNING POPUP
+   ============================================================ */
+.mobile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+  padding: 1.2rem;
+  box-sizing: border-box;
+}
+
+.mobile-overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+  transition: opacity 0.3s ease, visibility 0s;
+}
+
+.mobile-card {
+  width: min(380px, 100%);
+  background: #050507;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  padding: 2rem 1.6rem;
+  font-family: var(--font);
+  color: var(--fg);
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.mobile-title {
+  margin: 0 0 1rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking);
+}
+
+.mobile-message {
+  margin: 0 0 1.5rem;
+  font-size: 0.9rem;
+  letter-spacing: var(--tracking);
+  line-height: 1.55;
+  color: var(--fg-soft);
+}
+
+.mobile-btn {
+  font-size: 0.95rem;
+  padding: 0.55rem 1.6rem;
+}
+
+/* ============================================================
+   TAB-HIDDEN — stop burning frames on a backgrounded tab
+   ============================================================ */
+body.tab-hidden .orbit-spin,
+body.tab-hidden .orb-stage.bumping,
+body.tab-hidden #home.bumping,
+body.tab-hidden #menuOverlay.bumping,
+body.tab-hidden .audio-bar.bumping {
+  animation-play-state: paused;
+}
+
+/* ============================================================
+   PREFERS-REDUCED-MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  /* the ring still appears, it just stops travelling — and the orb holds
+     still rather than pumping, while the audio plays on untouched */
+  .orbit-spin { animation: none !important; }
+  .orb-stage.bumping { animation: none !important; }
+  #home.bumping,
+  #menuOverlay.bumping,
+  .audio-bar.bumping { animation: none !important; }
+  .plx { transform: none !important; }
+  #home::before { transform: none !important; }
+  .orbit { animation-name: orbit-fade; animation-duration: 0.4s; }
+  #home.menu-open .dock-orbit { animation-name: orbit-fade; animation-duration: 0.4s; }
+  .orb-btn:hover, .orb-btn:focus-visible { transform: none; }
+
+  #home { transition: opacity 0.2s ease !important; }
+  .orb-dock { transition: none; }
+  #home.menu-open .orb-dock { transform: translateX(calc(-1 * var(--dock-x))); }
+  .menu-view { transition: opacity 0.15s ease, visibility 0s linear 0.15s; transform: none; }
+  .menu-overlay[data-view="socials"] .view-main,
+  .menu-overlay[data-view="friends"] .view-main { transform: none; }
+
+  .menu-overlay { transition: opacity 0.15s ease !important; }
+  .screen { transition: opacity 0.15s ease; }
+}

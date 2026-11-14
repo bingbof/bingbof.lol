@@ -1,0 +1,691 @@
+/* ============================================================
+   bingbof.lol chat — loaded after /css/styles.css, which provides
+   the font, tokens, .btn and .hidden
+   ============================================================ */
+
+/* ============================================================
+   APP SHELL
+   Full viewport: a room rail on the left, the stream filling
+   the rest, composer docked at the bottom. Transparent so the
+   shared background canvas reads through; z-index clears the
+   background layers (canvas 0, scanlines 1, vignette 2).
+   ============================================================ */
+.chat-app {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.chat-auth,
+.chat-picker,
+.chat-shell {
+  display: none;
+  height: 100%;
+}
+
+/* ---- room selection ------------------------------------------ */
+.chat-picker {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+  padding: 1.2rem;
+  box-sizing: border-box;
+}
+
+.picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  width: min(360px, 100%);
+}
+
+.picker-room {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* .btn inverts to white-on-black on hover, so the faint badge inside it
+   needs the inverted muted tone or it vanishes against the fill */
+.picker-room:hover .rail-room-missed,
+.picker-room:focus-visible .rail-room-missed {
+  color: var(--fg-inverted-muted);
+}
+
+.picker-me {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  letter-spacing: var(--tracking);
+  color: var(--fg-faint);
+}
+
+.chat-app[data-view="auth"]   .chat-auth   { display: flex; }
+.chat-app[data-view="picker"] .chat-picker { display: flex; }
+.chat-app[data-view="app"]    .chat-shell  { display: grid; }
+
+/* ---- auth ---------------------------------------------------- */
+.chat-auth {
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  box-sizing: border-box;
+}
+
+.chat-auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: min(360px, 100%);
+}
+
+/* ---- shared controls ----------------------------------------- */
+.chat-title {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: var(--tracking);
+  text-align: center;
+  color: var(--fg);
+}
+
+.chat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.chat-btn {
+  font-size: 1rem;
+  padding: 0.6rem 1.2rem;
+}
+
+.chat-input {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font: inherit;
+  font-family: var(--font);
+  font-size: 1rem;
+  letter-spacing: var(--tracking);
+  padding: 0.6rem 0.9rem;
+  box-sizing: border-box;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.chat-input::placeholder {
+  color: var(--fg-faint);
+}
+
+.chat-input:focus {
+  border-color: var(--fg);
+  box-shadow: var(--glow-input);
+}
+
+/* underlined text button ("create one", "log out") */
+.text-btn {
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font: inherit;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  letter-spacing: var(--tracking);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+  padding: 0.3rem;
+  align-self: center;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color var(--t-fast);
+}
+
+.text-btn:hover, .text-btn:focus-visible {
+  color: var(--fg);
+  outline: none;
+}
+
+.chat-error {
+  color: var(--error);
+  font-size: 0.85rem;
+  text-align: center;
+  letter-spacing: var(--tracking);
+}
+
+.presence-user {
+  color: var(--fg-soft);
+}
+
+/* ---- rail ---------------------------------------------------- */
+.chat-shell {
+  grid-template-columns: 240px 1fr;
+}
+
+/* one measure shared by header, stream and composer so the three stay in
+   line, centred in the main column instead of hugging its left edge */
+.chat-main {
+  /* none = the column fills the width. set a length here (e.g. 900px) to
+     re-cap the measure; header, stream and composer all follow it. */
+  --chat-measure: none;
+}
+
+.chat-rail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 1.1rem 0;
+  box-sizing: border-box;
+  border-right: 1px solid var(--line-soft);
+}
+
+.rail-home {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0 1.1rem 1.1rem;
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition: color var(--t-fast);
+}
+
+.rail-home:hover,
+.rail-home:focus-visible {
+  color: var(--fg);
+  outline: none;
+}
+
+.rail-orb {
+  width: 26px;
+  height: 26px;
+  display: block;
+  flex: none;
+}
+
+.rail-home-label {
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking);
+}
+
+.rail-rooms {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* flush, left-aligned, no fill — the active room is marked with an edge
+   rule rather than a block of colour, matching the rest of the site */
+.rail-room {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  padding: 0.6rem 1.1rem;
+  box-sizing: border-box;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  color: var(--fg-muted);
+  font: inherit;
+  font-family: var(--font);
+  font-size: 0.92rem;
+  letter-spacing: var(--tracking);
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+.rail-room:hover,
+.rail-room:focus-visible {
+  color: var(--fg);
+  outline: none;
+}
+
+.rail-room.active {
+  color: var(--fg);
+  border-left-color: var(--fg);
+}
+
+.rail-room-name {
+  overflow-wrap: anywhere;
+}
+
+.rail-room-missed {
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: var(--fg-faint);
+}
+
+.rail-room.active .rail-room-missed {
+  color: var(--fg-muted);
+}
+
+.rail-me {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 1.1rem 1.1rem 0;
+  font-size: 0.72rem;
+  letter-spacing: var(--tracking);
+  color: var(--fg-faint);
+}
+
+.rail-me-line {
+  overflow-wrap: anywhere;
+}
+
+.rail-me .text-btn {
+  align-self: flex-start;
+  padding: 0;
+  font-size: 0.72rem;
+}
+
+/* ---- main column --------------------------------------------- */
+.chat-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.chat-head {
+  flex: none;
+  padding: 1rem 1.4rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.chat-head-inner {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+}
+
+.chat-app[data-pane="empty"] .chat-head { visibility: hidden; }
+
+.chat-room-title {
+  font-size: 1.05rem;
+  letter-spacing: var(--tracking);
+  color: var(--fg);
+}
+
+.chat-presence {
+  min-width: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* the three panes share this area; data-pane picks one */
+.chat-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.chat-messages,
+.chat-empty,
+.chat-unlock {
+  display: none;
+}
+
+.chat-app[data-pane="room"]   .chat-messages,
+.chat-app[data-pane="empty"]  .chat-empty,
+.chat-app[data-pane="locked"] .chat-unlock {
+  display: flex;
+}
+
+.chat-empty {
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  color: var(--fg-faint);
+}
+
+.chat-unlock {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 1.4rem;
+  box-sizing: border-box;
+}
+
+.chat-unlock .chat-form {
+  width: min(320px, 100%);
+}
+
+/* ---- composer ------------------------------------------------- */
+.chat-compose {
+  position: relative;
+  flex: none;
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid var(--line-soft);
+}
+
+.chat-app[data-pane="room"] .chat-compose { display: block; }
+.chat-app:not([data-pane="room"]) .chat-compose { display: none; }
+
+.chat-head-inner,
+.chat-compose .chat-message-form,
+.chat-compose .chat-reply-bar {
+  width: 100%;
+  max-width: var(--chat-measure);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+/* not in the room yet, so there is no presence to report */
+.chat-app[data-pane="locked"] .chat-presence { visibility: hidden; }
+.chat-messages {
+  list-style: none;
+  padding: 1rem 1.4rem;
+  margin: 0;
+  width: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  box-sizing: border-box;
+  flex-direction: column;
+  gap: 0.15rem;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-soft) transparent;
+}
+
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb {
+  background: var(--line-soft);
+}
+
+/* ---- messages ------------------------------------------------ */
+.chat-message {
+  position: relative;
+  width: 100%;
+  max-width: var(--chat-measure);
+  margin: 0 auto;
+  box-sizing: border-box;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  letter-spacing: var(--tracking);
+  color: var(--fg-soft);
+  overflow-wrap: anywhere;
+  padding: 1px 3px;
+}
+
+/* discord-style grouping: a new sender starts a group with a name header;
+   consecutive messages from the same sender are bare text lines under it */
+/* the clock alone is ambiguous once a room spans days */
+.chat-day {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  width: 100%;
+  max-width: var(--chat-measure);
+  margin: 1.2rem auto 0.5rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: lowercase;
+  color: var(--fg-faint);
+}
+
+.chat-day::before,
+.chat-day::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line-soft);
+}
+
+.chat-message + .chat-message-first {
+  margin-top: 1rem;
+}
+
+.chat-message-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.12rem;
+}
+
+.chat-message-user {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.chat-message-time {
+  text-transform: lowercase;
+  color: var(--fg-faint);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.chat-message-text {
+  display: block;
+}
+
+.chat-message.chat-message-action {
+  color: rgba(255, 255, 255, 0.65);
+  font-style: italic;
+  margin-top: 0.4rem;
+}
+
+.chat-message.chat-message-system {
+  opacity: 0.5;
+}
+
+/* per-message "reply" affordance (top-right, appears on hover) */
+.chat-msg-reply-btn {
+  position: absolute;
+  top: 0;
+  right: 3px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  opacity: 0;
+  /* .btn's list plus the reveal, which .btn has no reason to carry */
+  transition: opacity var(--t-fast),
+              background var(--t-fast), color var(--t-fast),
+              border-color var(--t-fast), box-shadow var(--t-fast);
+}
+
+.chat-message:hover .chat-msg-reply-btn,
+.chat-msg-reply-btn:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .chat-msg-reply-btn { opacity: 0.45; }
+}
+
+/* the "in reply to" reference shown above a reply message */
+.chat-reply-ref {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 0.15rem;
+  padding: 0 0 0 0.5rem;
+  border: none;
+  border-left: 2px solid var(--line-soft);
+  background: none;
+  color: var(--fg-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color var(--t-fast), border-color var(--t-fast);
+}
+
+.chat-reply-ref:hover,
+.chat-reply-ref:focus-visible {
+  color: var(--fg);
+  border-left-color: var(--line);
+  outline: none;
+}
+
+.chat-reply-ref-user {
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+}
+
+.chat-reply-ref-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* flash when a reply reference jumps you to the original */
+.chat-message-flash {
+  animation: msg-flash 1.6s ease-out;
+}
+
+@keyframes msg-flash {
+  0%   { background: rgba(255, 255, 255, 0.22); }
+  100% { background: transparent; }
+}
+
+/* ---- below the message list ---------------------------------- */
+.chat-typing {
+  position: absolute;
+  left: 1.4rem;
+  right: 1.4rem;
+  bottom: 100%;
+  margin-bottom: 0.25rem;
+  pointer-events: none;
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking);
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.5);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-typing .typing-dots::after {
+  content: '';
+  animation: typing-dots 1.4s steps(4, end) infinite;
+}
+
+@keyframes typing-dots {
+  0%   { content: ''; }
+  25%  { content: '.'; }
+  50%  { content: '..'; }
+  75%  { content: '...'; }
+  100% { content: ''; }
+}
+
+/* "replying to …" bar above the message input */
+.chat-reply-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  padding: 0.35rem 0.5rem;
+  border-left: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.chat-reply-bar.hidden {
+  display: none;
+}
+
+.chat-reply-bar-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-reply-cancel {
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  background: none;
+  border: none;
+  color: var(--fg-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: color var(--t-fast);
+}
+
+.chat-reply-cancel:hover,
+.chat-reply-cancel:focus-visible {
+  color: var(--fg);
+  outline: none;
+}
+
+/* a chip on the opposite side from the typing line, with an opaque ground so
+   it reads as a notice instead of colliding with the messages behind it */
+.chat-rate-warn {
+  position: absolute;
+  right: 1.4rem;
+  bottom: 100%;
+  margin-bottom: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  background: var(--bg);
+  border: 1px solid var(--error);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  color: var(--error);
+  pointer-events: none;
+}
+
+.chat-message-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.chat-message-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ============================================================
+   PREFERS-REDUCED-MOTION
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .chat-typing .typing-dots::after { animation: none; content: '...'; }
+  .chat-message-flash { animation: none; background: rgba(255, 255, 255, 0.12); }
+}

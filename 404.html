@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>bingbof — not found</title>
+  <title>not found</title>
   <meta name="description" content="404 — nothing here" />
 
-  <link rel="icon" href="/favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="/img/orb.png" type="image/png" />
   <link rel="shortcut icon" href="/favicon.ico" type="image/x-icon" />
   <meta name="theme-color" content="#000000" />
 
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/css/styles.css" />
   <style>
     #notfound {
       position: fixed;
@@ -23,27 +23,34 @@
       text-align: center;
       padding: 2rem;
       box-sizing: border-box;
+      perspective: 1600px;
     }
 
+    /* self-contained: the home page's spin keyframe is gone as of v4 */
     .nf-code {
       margin: 0;
-      font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+      font-family: var(--font);
       font-size: clamp(6rem, 22vw, 16rem);
+      font-weight: 700;
       line-height: 1;
-      letter-spacing: 0.05em;
-      color: #fff;
-      mix-blend-mode: difference;
-      animation: welcome-spin 3s linear infinite;
+      letter-spacing: 0.02em;
+      color: var(--fg);
+      animation: nf-spin 3s linear infinite;
       will-change: transform;
+    }
+
+    @keyframes nf-spin {
+      from { transform: rotateY(0deg);   }
+      to   { transform: rotateY(360deg); }
     }
 
     .nf-message {
       margin: 0;
-      font-family: 'Minecraft', 'Cascadia Mono', Consolas, monospace;
+      font-family: var(--font);
       font-size: 1rem;
-      letter-spacing: 0.15em;
+      letter-spacing: 0.12em;
       text-transform: lowercase;
-      color: rgba(255, 255, 255, 0.55);
+      color: var(--fg-muted);
     }
 
     .nf-home {
@@ -51,13 +58,27 @@
       padding: 0.6rem 1.4rem;
       margin-top: 0.8rem;
     }
+
+    body.tab-hidden .nf-code { animation-play-state: paused; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .nf-code { animation: none; }
+    }
   </style>
 </head>
 <body>
   <div id="notfound">
     <pre class="nf-code">404</pre>
     <p class="nf-message">nothing here</p>
-    <a class="enter nf-home" href="/">back home</a>
+    <a class="btn enter nf-home" href="/">back home</a>
   </div>
+
+  <script src="/js/ui-sound.js"></script>
+
+  <script>
+    document.addEventListener('visibilitychange', () => {
+      document.body.classList.toggle('tab-hidden', document.hidden);
+    });
+  </script>
 </body>
 </html>
